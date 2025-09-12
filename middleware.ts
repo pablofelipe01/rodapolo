@@ -27,7 +27,7 @@ export async function middleware(request: NextRequest) {
       const { data: profileData } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', session.user.id)
+        .eq('user_id', session.user.id) // Cambié 'id' por 'user_id'
         .single()
 
       // Protección de rutas por rol

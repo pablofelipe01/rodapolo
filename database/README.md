@@ -16,6 +16,7 @@ El sistema está diseñado con **PostgreSQL** usando **Supabase** como backend, 
 ## Estructura de Usuarios
 
 ### 1. Profiles (Perfiles de Usuarios Registrados)
+
 ```sql
 profiles (
   id UUID PRIMARY KEY,
@@ -29,10 +30,12 @@ profiles (
 ```
 
 **Usuarios del sistema:**
+
 - **Admin**: Crea contenido, gestiona clases, ve estadísticas
 - **Parental**: Compra tiqueteras, hace reservas para sus hijos
 
 ### 2. Junior Profiles (Perfiles de Menores)
+
 ```sql
 junior_profiles (
   id UUID PRIMARY KEY,
@@ -47,6 +50,7 @@ junior_profiles (
 ```
 
 **Características especiales:**
+
 - Los juniors **NO** tienen cuenta en Supabase Auth
 - Acceden solo con **código único** de 8 caracteres
 - Están vinculados a un parental que los gestiona
@@ -54,6 +58,7 @@ junior_profiles (
 ## Sistema de Tiqueteras
 
 ### 3. Ticket Packages (Paquetes de Tickets)
+
 ```sql
 ticket_packages (
   id UUID PRIMARY KEY,
@@ -67,6 +72,7 @@ ticket_packages (
 ```
 
 ### 4. Purchased Tickets (Tiqueteras Compradas)
+
 ```sql
 purchased_tickets (
   id UUID PRIMARY KEY,
@@ -80,6 +86,7 @@ purchased_tickets (
 ```
 
 ### 5. Ticket Units (Tickets Individuales)
+
 ```sql
 ticket_units (
   id UUID PRIMARY KEY,
@@ -91,6 +98,7 @@ ticket_units (
 ```
 
 **Estados del Ticket:**
+
 - `available`: Disponible para usar
 - `blocked`: Bloqueado para una clase (24h máximo)
 - `used`: Usado exitosamente (clase completada)
@@ -99,6 +107,7 @@ ticket_units (
 ## Sistema de Clases
 
 ### 6. Classes (Clases de Rodapolo)
+
 ```sql
 classes (
   id UUID PRIMARY KEY,
@@ -118,6 +127,7 @@ classes (
 ```
 
 ### 7. Bookings (Reservas)
+
 ```sql
 bookings (
   id UUID PRIMARY KEY,
@@ -136,6 +146,7 @@ bookings (
 ## Sistema de Contenido
 
 ### 8. Posts (Contenido Educativo)
+
 ```sql
 posts (
   id UUID PRIMARY KEY,
@@ -153,6 +164,7 @@ posts (
 ```
 
 ### 9. Post Likes y Post Views
+
 Tablas auxiliares para gestionar interacciones de los juniors con el contenido.
 
 ## Lógica de Negocio Automatizada
@@ -160,12 +172,14 @@ Tablas auxiliares para gestionar interacciones de los juniors con el contenido.
 ### Triggers Principales
 
 1. **Creación Automática de Tickets**
+
    ```sql
    -- Al comprar tiquetera, se crean tickets individuales automáticamente
    CREATE TRIGGER create_ticket_units_trigger
    ```
 
 2. **Gestión de Estado de Tickets**
+
    ```sql
    -- Bloqueo automático al hacer reserva
    -- Liberación automática si se cancela con +24h
@@ -173,6 +187,7 @@ Tablas auxiliares para gestionar interacciones de los juniors con el contenido.
    ```
 
 3. **Actualización de Contadores**
+
    ```sql
    -- current_bookings en classes
    -- used_tickets en purchased_tickets
@@ -198,16 +213,19 @@ Tablas auxiliares para gestionar interacciones de los juniors con el contenido.
 ### Políticas por Rol
 
 **Admins:**
+
 - Acceso completo a todas las tablas
 - Pueden crear/editar clases y posts
 - Ven estadísticas globales
 
 **Parentales:**
+
 - Solo ven sus propios datos y los de sus hijos
 - Pueden comprar tiqueteras y hacer reservas
 - No pueden acceder a datos de otros parentales
 
 **Juniors (sin autenticación tradicional):**
+
 - Solo ven posts publicados
 - Pueden dar likes y registrar visualizaciones
 - Acceso controlado por códigos únicos
@@ -235,11 +253,13 @@ Para crear la base de datos completa, ejecutar en este orden:
 ## Casos de Uso Principales
 
 ### 1. Flujo de Compra de Tiquetera
+
 1. Parental compra paquete → `purchased_tickets`
 2. Se crean tickets individuales automáticamente → `ticket_units`
 3. Tickets quedan `available` para usar
 
 ### 2. Flujo de Reserva
+
 1. Parental selecciona clase y junior
 2. Sistema valida ticket disponible
 3. Ticket pasa a `blocked` → `bookings` creada
@@ -248,6 +268,7 @@ Para crear la base de datos completa, ejecutar en este orden:
 6. Si se asiste: ticket pasa a `used`
 
 ### 3. Acceso Junior
+
 1. Junior ingresa código único
 2. Sistema verifica en `junior_profiles`
 3. Acceso a posts publicados y funciones de like/view

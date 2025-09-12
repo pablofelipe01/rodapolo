@@ -31,25 +31,35 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
+    console.log('🔐 Intentando login con:', { email })
+
     try {
+      console.log('🔄 Llamando a supabase.auth.signInWithPassword...')
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
+      console.log('🔐 Respuesta de Supabase:', { data, error })
+
       if (error) {
+        console.error('❌ Error de autenticación:', error)
         setError(error.message)
         return
       }
 
       if (data.user) {
+        console.log('✅ Usuario autenticado:', data.user.id)
+        console.log('🔄 Redirigiendo a /')
         // El middleware se encargará de redirigir al dashboard apropiado
         router.push('/')
       }
     } catch (error) {
+      console.error('❌ Error inesperado en catch:', error)
       setError('Error inesperado al iniciar sesión')
-      console.error('Login error:', error)
     } finally {
+      console.log('🏁 Finalizando login, loading = false')
       setLoading(false)
     }
   }
