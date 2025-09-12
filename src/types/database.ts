@@ -1,3 +1,28 @@
+// Tipos más flexibles para operaciones CRUD
+export type FlexibleClassInsert = {
+  date: string
+  start_time: string
+  end_time: string
+  instructor_name: string
+  capacity: number
+  level: 'alpha' | 'beta' | 'mixed'
+  field?: string | null
+  notes?: string | null
+  admin_id?: string | null
+  current_bookings?: number
+}
+
+export type FlexibleClassUpdate = {
+  date?: string
+  start_time?: string
+  end_time?: string
+  instructor_name?: string
+  capacity?: number
+  level?: 'alpha' | 'beta' | 'mixed'
+  field?: string | null
+  notes?: string | null
+}
+
 // ============================================================================
 // TIPOS TYPESCRIPT PARA LA BASE DE DATOS RODAPOLO
 // Generados automáticamente basados en el schema de Supabase
