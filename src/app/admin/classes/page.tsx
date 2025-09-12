@@ -32,6 +32,29 @@ import {
 } from 'lucide-react'
 import type { Database } from '@/types/database'
 
+// Función auxiliar para formatear fechas sin conversión de zona horaria
+const formatDateForDisplay = (dateString: string) => {
+  const [year, month, day] = dateString.split('-')
+  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+  return date.toLocaleDateString('es-ES', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
+
+// Función auxiliar para asegurar formato correcto de fecha para inputs
+const formatDateForInput = (dateString: string) => {
+  // Si ya está en formato YYYY-MM-DD, devolver tal como está
+  if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return dateString
+  }
+  // Si no, convertir correctamente
+  const date = new Date(dateString)
+  return date.toISOString().split('T')[0]
+}
+
 // Definir tipos específicos para mayor claridad
 type ClassRow = Database['public']['Tables']['classes']['Row']
 type ClassInsert = Database['public']['Tables']['classes']['Insert']
@@ -107,30 +130,40 @@ export default function ClassesPage() {
     setError('')
     setSuccess('')
 
+    console.log('🔄 handleSubmit llamado')
+    console.log('📝 editingClass:', editingClass)
+    console.log('📝 formData:', formData)
+
     try {
       if (editingClass) {
-        // Actualizar clase existente - TEMPORALMENTE COMENTADO PARA DEBUGGING
-        /*
-        const updateFields: ClassUpdate = {
+        console.log('✏️ Actualizando clase existente con ID:', editingClass.id)
+        // Actualizar clase existente - workaround para problema de tipos
+        const updatePayload = {
           date: formData.date,
           start_time: formData.start_time,
           end_time: formData.end_time,
           instructor_name: formData.instructor_name,
           capacity: formData.capacity,
+          current_bookings: formData.current_bookings || 0,
           level: formData.level || 'mixed',
           status: formData.status || 'scheduled',
-          field: formData.field ?? null,
-          notes: formData.notes ?? null,
+          field: formData.field || null,
+          notes: formData.notes || null,
         }
 
-        const { error } = await supabase
+        console.log('📦 updatePayload:', updatePayload)
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await (supabase as any)
           .from('classes')
-          .update(updateFields)
+          .update(updatePayload)
           .eq('id', editingClass.id)
 
+        console.log('📤 Update response error:', error)
+
         if (error) throw error
-        */
-        setSuccess('Actualización temporalmente deshabilitada para debugging')
+        setSuccess('Clase actualizada exitosamente')
+        console.log('✅ Clase actualizada exitosamente')
       } else {
         // Crear nueva clase - usando cliente sin tipos estrictos temporalmente
         const insertData = {
@@ -166,9 +199,10 @@ export default function ClassesPage() {
   }
 
   const handleEdit = (classItem: ClassRow) => {
+    console.log('✏️ handleEdit llamado con:', classItem)
     setEditingClass(classItem)
     setFormData({
-      date: classItem.date,
+      date: formatDateForInput(classItem.date),
       start_time: classItem.start_time,
       end_time: classItem.end_time,
       instructor_name: classItem.instructor_name,
@@ -179,6 +213,7 @@ export default function ClassesPage() {
       notes: classItem.notes,
     })
     setShowForm(true)
+    console.log('📝 Formulario configurado para edición')
   }
 
   const handleDelete = async (id: string) => {
@@ -423,7 +458,17 @@ export default function ClassesPage() {
               </div>
 
               <div className='flex gap-2'>
-                <Button type='submit'>
+                <Button
+                  type='button'
+                  onClick={() => {
+                    console.log('🖱️ Botón clickeado directamente!')
+                    // Crear un evento sintético para handleSubmit
+                    const syntheticEvent = {
+                      preventDefault: () => {},
+                    } as React.FormEvent
+                    handleSubmit(syntheticEvent)
+                  }}
+                >
                   {editingClass ? 'Actualizar' : 'Crear'} Clase
                 </Button>
                 <Button type='button' variant='outline' onClick={resetForm}>
@@ -461,15 +506,7 @@ export default function ClassesPage() {
                       <div className='flex items-center gap-2'>
                         <Calendar className='h-4 w-4 text-gray-500' />
                         <span className='font-medium'>
-                          {new Date(classItem.date).toLocaleDateString(
-                            'es-ES',
-                            {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                            }
-                          )}
+                          {formatDateForDisplay(classItem.date)}
                         </span>
                       </div>
                       <div className='flex items-center gap-2'>
