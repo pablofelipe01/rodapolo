@@ -7,6 +7,12 @@
 
 -- Opción 2: Configurar políticas RLS correctas (RECOMENDADO)
 
+-- Política para permitir acceso público SOLO para login de juniors (por código único)
+CREATE POLICY "Allow public access for junior login" ON junior_profiles
+    FOR SELECT
+    TO public
+    USING (active = true);
+
 -- Política para permitir SELECT a usuarios autenticados
 CREATE POLICY "Allow authenticated users to view junior profiles" ON junior_profiles
     FOR SELECT

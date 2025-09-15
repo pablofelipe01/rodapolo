@@ -38,7 +38,7 @@ export default function JuniorAccessPage() {
         .from('junior_profiles')
         .select('*')
         .eq('unique_code', uniqueCode.toUpperCase())
-        .eq('is_active', true)
+        .eq('active', true)
         .single()
 
       if (profileError || !juniorProfile) {
