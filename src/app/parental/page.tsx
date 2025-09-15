@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/providers/AuthProvider'
 import { createClientSupabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Card,
   CardContent,
@@ -14,6 +16,20 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Users,
   Baby,
@@ -54,12 +70,35 @@ type ClassInfo = {
   current_bookings: number
 }
 
+type Booking = {
+  id: string
+  status: 'confirmed' | 'cancelled' | 'attended' | 'no_show'
+  class_date: string
+  start_time: string
+  end_time: string
+  instructor_name: string
+  junior_name: string
+  junior_nickname: string | null
+}
+
 export default function ParentalDashboard() {
   const { user, profile } = useAuth()
   const [children, setChildren] = useState<JuniorProfile[]>([])
   const [upcomingClasses, setUpcomingClasses] = useState<ClassInfo[]>([])
+  const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null)
+  const [selectedJunior, setSelectedJunior] = useState<string>('')
+  const [showBookingModal, setShowBookingModal] = useState(false)
+  const [bookingLoading, setBookingLoading] = useState(false)
+  const [showAddChildModal, setShowAddChildModal] = useState(false)
+  const [newChildForm, setNewChildForm] = useState({
+    full_name: '',
+    nickname: '',
+    birth_date: '',
+    level: 'alpha' as 'alpha' | 'beta',
+  })
 
   const supabase = createClientSupabase()
 
@@ -76,6 +115,8 @@ export default function ParentalDashboard() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
+      console.log('Children data:', data) // Debug
+      console.log('Profile ID:', profile.id) // Debug
       setChildren(data || [])
     } catch (err) {
       console.error('Error fetching children:', err)
@@ -105,12 +146,157 @@ export default function ParentalDashboard() {
     }
   }, [supabase])
 
+  // Función para obtener reservas del parental
+  const fetchBookings = useCallback(async () => {
+    if (!profile?.id) return
+
+    try {
+      const { data, error } = await supabase
+        .from('simple_bookings_view')
+        .select('*')
+        .eq('parental_id', profile.id)
+        .order('class_date', { ascending: true })
+
+      if (error) throw error
+      setBookings(data || [])
+    } catch (err) {
+      console.error('Error fetching bookings:', err)
+    }
+  }, [profile?.id, supabase])
+
+  // Función para crear una reserva
+  const createBooking = async (classId: string, juniorId: string) => {
+    if (!profile?.id) return
+
+    try {
+      setBookingLoading(true)
+
+      console.log('🔍 Creando reserva con parámetros:', {
+        p_junior_id: juniorId,
+        p_class_id: classId,
+      })
+
+      const { data, error } = await supabase.rpc('create_reservation_final', {
+        p_junior_id: juniorId,
+        p_class_id: classId,
+      })
+
+      console.log('🔍 Respuesta de create_reservation_final:', { data, error })
+
+      // Revisar si la función devolvió un error dentro de data
+      if (data && data.success === false) {
+        console.error('🚨 Error dentro de data:', data.error)
+        console.error('🔍 Debug info:', data.debug)
+        console.error('🔍 Parental ID:', data.parental_id)
+        console.error('🔍 Full data object:', JSON.stringify(data, null, 2))
+        throw new Error(`Database error: ${data.error}`)
+      }
+
+      if (error) {
+        console.error('🚨 Error en create_reservation_final:', error)
+        throw error
+      }
+
+      console.log('✅ Booking creado exitosamente:', data)
+
+      // Refrescar datos
+      await Promise.all([fetchBookings(), fetchUpcomingClasses()])
+
+      setError(null)
+      setShowBookingModal(false)
+      setSelectedClass(null)
+      setSelectedJunior('')
+      alert('¡Reserva creada exitosamente!')
+    } catch (err: unknown) {
+      console.error('🚨 Error creating booking:', err)
+      console.error('🚨 Error type:', typeof err)
+      console.error('🚨 Error constructor:', err?.constructor?.name)
+
+      if (err && typeof err === 'object') {
+        console.error('🚨 Error keys:', Object.keys(err))
+        console.error('🚨 Error JSON:', JSON.stringify(err, null, 2))
+      }
+
+      const errorMessage =
+        err instanceof Error ? err.message : 'Error al crear la reserva'
+      setError(errorMessage)
+    } finally {
+      setBookingLoading(false)
+    }
+  }
+
+  // Función para abrir modal de reserva
+  const openBookingModal = (classInfo: ClassInfo) => {
+    setSelectedClass(classInfo)
+    setSelectedJunior('')
+    setShowBookingModal(true)
+  }
+
+  // Función para confirmar reserva
+  const handleConfirmBooking = async () => {
+    if (!selectedClass || !selectedJunior) return
+    await createBooking(selectedClass.id, selectedJunior)
+  }
+
+  // Función para crear un nuevo hijo
+  const createChild = async () => {
+    if (!profile?.id || !newChildForm.full_name) return
+
+    try {
+      setLoading(true)
+
+      // Generar código único
+      const uniqueCode = `JUNIOR${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+
+      const { error } = await supabase
+        .from('junior_profiles')
+        .insert({
+          parental_id: profile.id,
+          unique_code: uniqueCode,
+          full_name: newChildForm.full_name,
+          nickname: newChildForm.nickname || null,
+          birth_date: newChildForm.birth_date || null,
+          level: newChildForm.level,
+          active: true,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Actualizar lista de hijos
+      await fetchChildren()
+
+      // Limpiar formulario y cerrar modal
+      setNewChildForm({
+        full_name: '',
+        nickname: '',
+        birth_date: '',
+        level: 'alpha',
+      })
+      setShowAddChildModal(false)
+
+      alert('¡Hijo agregado exitosamente!')
+    } catch (err) {
+      console.error('Error creating child:', err)
+      setError('Error al crear el perfil del hijo')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Función para abrir modal de agregar hijo
+  const openAddChildModal = () => {
+    setShowAddChildModal(true)
+  }
+
   useEffect(() => {
     if (profile?.role === 'parental') {
       fetchChildren()
       fetchUpcomingClasses()
+      fetchBookings()
     }
-  }, [profile, fetchChildren, fetchUpcomingClasses])
+  }, [profile, fetchChildren, fetchUpcomingClasses, fetchBookings])
 
   // Función para obtener estadísticas
   const getStats = () => {
@@ -270,7 +456,7 @@ export default function ParentalDashboard() {
         <TabsContent value='children' className='space-y-4'>
           <div className='flex justify-between items-center'>
             <h2 className='text-xl font-semibold'>Perfiles de Mis Hijos</h2>
-            <Button>
+            <Button onClick={openAddChildModal}>
               <Plus className='mr-2 h-4 w-4' />
               Agregar Hijo
             </Button>
@@ -443,7 +629,12 @@ export default function ParentalDashboard() {
                         </div>
                       </div>
                       <div className='flex items-center gap-2'>
-                        <Button variant='outline' size='sm'>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() => openBookingModal(classInfo)}
+                          disabled={children.length === 0}
+                        >
                           Reservar
                         </Button>
                       </div>
@@ -469,19 +660,256 @@ export default function ParentalDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className='text-center py-8'>
-                <Calendar className='mx-auto h-12 w-12 text-gray-400' />
-                <h3 className='mt-2 text-sm font-medium text-gray-900'>
-                  No hay reservas activas
-                </h3>
-                <p className='mt-1 text-sm text-gray-500'>
-                  Tus reservas aparecerán aquí una vez que reserves clases.
-                </p>
-              </div>
+              {bookings.length === 0 ? (
+                <div className='text-center py-8'>
+                  <Calendar className='mx-auto h-12 w-12 text-gray-400' />
+                  <h3 className='mt-2 text-sm font-medium text-gray-900'>
+                    No hay reservas activas
+                  </h3>
+                  <p className='mt-1 text-sm text-gray-500'>
+                    Tus reservas aparecerán aquí una vez que reserves clases.
+                  </p>
+                </div>
+              ) : (
+                <div className='space-y-4'>
+                  {bookings.map(booking => (
+                    <div
+                      key={booking.id}
+                      className='flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50'
+                    >
+                      <div className='flex items-center space-x-4'>
+                        <div className='flex-shrink-0'>
+                          <div
+                            className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                              booking.status === 'confirmed'
+                                ? 'bg-green-100'
+                                : 'bg-gray-100'
+                            }`}
+                          >
+                            <BookOpen className='h-6 w-6 text-green-600' />
+                          </div>
+                        </div>
+                        <div>
+                          <div className='flex items-center gap-2'>
+                            <h3 className='text-lg font-medium text-gray-900'>
+                              {booking.instructor_name}
+                            </h3>
+                            <Badge
+                              variant={
+                                booking.status === 'confirmed'
+                                  ? 'default'
+                                  : 'secondary'
+                              }
+                            >
+                              {booking.status === 'confirmed'
+                                ? 'CONFIRMADA'
+                                : booking.status.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <div className='flex items-center gap-4 mt-1 text-sm text-gray-500'>
+                            <div className='flex items-center gap-1'>
+                              <User className='w-3 h-3' />
+                              {booking.junior_name}
+                            </div>
+                            <div className='flex items-center gap-1'>
+                              <Calendar className='w-3 h-3' />
+                              {formatDate(booking.class_date)}
+                            </div>
+                            <div className='flex items-center gap-1'>
+                              <Clock className='w-3 h-3' />
+                              {formatTime(booking.start_time)} -{' '}
+                              {formatTime(booking.end_time)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Modal de Reserva */}
+      <Dialog open={showBookingModal} onOpenChange={setShowBookingModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reservar Clase</DialogTitle>
+            <DialogDescription>
+              Selecciona para cuál de tus hijos quieres reservar esta clase
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedClass && (
+            <div className='space-y-4'>
+              <div className='p-4 bg-gray-50 rounded-lg'>
+                <h3 className='font-medium'>{selectedClass.instructor_name}</h3>
+                <div className='flex items-center gap-4 mt-2 text-sm text-gray-600'>
+                  <span>{formatDate(selectedClass.date)}</span>
+                  <span>
+                    {formatTime(selectedClass.start_time)} -{' '}
+                    {formatTime(selectedClass.end_time)}
+                  </span>
+                  <Badge
+                    variant={
+                      selectedClass.level === 'mixed' ? 'outline' : 'default'
+                    }
+                  >
+                    {selectedClass.level === 'mixed'
+                      ? 'MIXTO'
+                      : selectedClass.level.toUpperCase()}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className='space-y-2'>
+                <label className='text-sm font-medium'>
+                  Seleccionar hijo/a:
+                </label>
+                <Select
+                  value={selectedJunior}
+                  onValueChange={setSelectedJunior}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder='Elige un hijo/a...' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {children
+                      .filter(
+                        child =>
+                          child.active &&
+                          (selectedClass.level === 'mixed' ||
+                            child.level === selectedClass.level)
+                      )
+                      .map(child => (
+                        <SelectItem key={child.id} value={child.id}>
+                          <div className='flex items-center gap-2'>
+                            <span>{child.full_name}</span>
+                            <Badge variant='outline'>
+                              {child.level.toUpperCase()}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className='flex justify-end gap-2 pt-4'>
+                <Button
+                  variant='outline'
+                  onClick={() => setShowBookingModal(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleConfirmBooking}
+                  disabled={!selectedJunior || bookingLoading}
+                >
+                  {bookingLoading ? 'Reservando...' : 'Confirmar Reserva'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para agregar hijo */}
+      <Dialog open={showAddChildModal} onOpenChange={setShowAddChildModal}>
+        <DialogContent className='sm:max-w-[425px]'>
+          <DialogHeader>
+            <DialogTitle>Agregar Nuevo Hijo</DialogTitle>
+            <DialogDescription>
+              Completa la información para registrar un nuevo hijo
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='space-y-4'>
+            <div className='space-y-2'>
+              <Label htmlFor='full_name'>Nombre completo *</Label>
+              <Input
+                id='full_name'
+                placeholder='Nombre completo del hijo/a'
+                value={newChildForm.full_name}
+                onChange={e =>
+                  setNewChildForm(prev => ({
+                    ...prev,
+                    full_name: e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='nickname'>Apodo (opcional)</Label>
+              <Input
+                id='nickname'
+                placeholder='Apodo o diminutivo'
+                value={newChildForm.nickname}
+                onChange={e =>
+                  setNewChildForm(prev => ({
+                    ...prev,
+                    nickname: e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='birth_date'>Fecha de nacimiento (opcional)</Label>
+              <Input
+                id='birth_date'
+                type='date'
+                value={newChildForm.birth_date}
+                onChange={e =>
+                  setNewChildForm(prev => ({
+                    ...prev,
+                    birth_date: e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <Label>Nivel inicial</Label>
+              <Select
+                value={newChildForm.level}
+                onValueChange={value =>
+                  setNewChildForm(prev => ({
+                    ...prev,
+                    level: value as 'alpha' | 'beta',
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='alpha'>Alpha (Principiante)</SelectItem>
+                  <SelectItem value='beta'>Beta (Intermedio)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className='flex justify-end gap-2 pt-4'>
+              <Button
+                variant='outline'
+                onClick={() => setShowAddChildModal(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={createChild}
+                disabled={!newChildForm.full_name || loading}
+              >
+                {loading ? 'Creando...' : 'Crear Hijo'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
