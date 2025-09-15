@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Calendar,
   CalendarDays,
@@ -71,6 +72,22 @@ export default function ClassesPage() {
   const [editingClass, setEditingClass] = useState<ClassRow | null>(null)
   const [currentView, setCurrentView] = useState<CalendarView>('list')
   const [selectedDate, setSelectedDate] = useState(new Date())
+  const [activeTab, setActiveTab] = useState<'individual' | 'season'>(
+    'individual'
+  )
+  const [seasonData, setSeasonData] = useState({
+    name: '',
+    startDate: '',
+    endDate: '',
+    daysOfWeek: [] as number[], // 0 = Domingo, 1 = Lunes, etc.
+    startTime: '',
+    endTime: '',
+    instructorName: '',
+    capacity: 8,
+    level: 'mixed' as 'alpha' | 'beta' | 'mixed',
+    field: '',
+    notes: '',
+  })
   const [formData, setFormData] = useState<FormData>({
     date: '',
     start_time: '',
@@ -164,8 +181,22 @@ export default function ClassesPage() {
       field: null,
       notes: null,
     })
+    setSeasonData({
+      name: '',
+      startDate: '',
+      endDate: '',
+      daysOfWeek: [],
+      startTime: '',
+      endTime: '',
+      instructorName: '',
+      capacity: 8,
+      level: 'mixed',
+      field: '',
+      notes: '',
+    })
     setEditingClass(null)
     setShowForm(false)
+    setActiveTab('individual')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -239,6 +270,97 @@ export default function ClassesPage() {
     } catch (err) {
       console.error('Error saving class:', err)
       setError('Error al guardar la clase')
+    }
+  }
+
+  // Función para generar clases recurrentes
+  const generateRecurringClasses = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Validaciones básicas
+      if (!seasonData.name || !seasonData.startDate || !seasonData.endDate) {
+        throw new Error('Nombre, fecha de inicio y fecha de fin son requeridos')
+      }
+
+      if (seasonData.daysOfWeek.length === 0) {
+        throw new Error('Selecciona al menos un día de la semana')
+      }
+
+      if (!seasonData.startTime || !seasonData.endTime) {
+        throw new Error('Hora de inicio y fin son requeridas')
+      }
+
+      if (!seasonData.instructorName) {
+        throw new Error('Nombre del instructor es requerido')
+      }
+
+      // Obtener perfil del usuario para admin_id
+      const userProfile = await getCurrentUserProfile()
+
+      // Generar todas las fechas en el rango que coincidan con los días seleccionados
+      const startDate = new Date(seasonData.startDate)
+      const endDate = new Date(seasonData.endDate)
+      const classesToCreate: FlexibleClassInsert[] = []
+
+      for (
+        let currentDate = new Date(startDate);
+        currentDate <= endDate;
+        currentDate.setDate(currentDate.getDate() + 1)
+      ) {
+        const dayOfWeek = currentDate.getDay() // 0 = Domingo, 1 = Lunes, etc.
+
+        if (seasonData.daysOfWeek.includes(dayOfWeek)) {
+          const classData: FlexibleClassInsert = {
+            date: currentDate.toISOString().split('T')[0], // YYYY-MM-DD format
+            start_time: seasonData.startTime,
+            end_time: seasonData.endTime,
+            instructor_name: seasonData.instructorName,
+            capacity: seasonData.capacity,
+            level: seasonData.level,
+            field: seasonData.field || null,
+            notes: seasonData.notes || null,
+            admin_id: userProfile.id,
+            current_bookings: 0,
+          }
+          classesToCreate.push(classData)
+        }
+      }
+
+      if (classesToCreate.length === 0) {
+        throw new Error(
+          'No se generaron clases. Verifica el rango de fechas y días seleccionados.'
+        )
+      }
+
+      console.log(
+        `📅 Generando ${classesToCreate.length} clases para la temporada "${seasonData.name}"`
+      )
+
+      // Crear todas las clases en batch
+      const { data, error } = await supabase
+        .from('classes')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .insert(classesToCreate as any)
+        .select()
+
+      if (error) throw error
+
+      console.log('✅ Temporada creada exitosamente:', data)
+      setSuccess(
+        `Temporada "${seasonData.name}" creada con ${classesToCreate.length} clases`
+      )
+
+      resetForm()
+      fetchClasses()
+    } catch (err) {
+      console.error('Error creating season:', err)
+      setError(
+        err instanceof Error ? err.message : 'Error al crear la temporada'
+      )
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -405,191 +527,423 @@ export default function ClassesPage() {
         </Alert>
       )}
 
-      {/* Formulario */}
+      {/* Formulario con Pestañas */}
       {showForm && (
         <Card>
           <CardHeader>
             <CardTitle>
-              {editingClass ? 'Editar Clase' : 'Nueva Clase'}
+              {activeTab === 'individual'
+                ? editingClass
+                  ? 'Editar Clase'
+                  : 'Nueva Clase'
+                : 'Nueva Temporada'}
             </CardTitle>
             <CardDescription>
-              Completa la información de la clase
+              {activeTab === 'individual'
+                ? 'Completa la información de la clase'
+                : 'Configura una temporada para crear múltiples clases automáticamente'}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className='space-y-4'>
-              <div className='grid grid-cols-2 gap-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='date'>Fecha</Label>
-                  <Input
-                    id='date'
-                    type='date'
-                    value={formData.date}
-                    onChange={e =>
-                      setFormData({ ...formData, date: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='instructor'>Instructor</Label>
-                  <Input
-                    id='instructor'
-                    value={formData.instructor_name}
-                    onChange={e =>
-                      setFormData({
-                        ...formData,
-                        instructor_name: e.target.value,
-                      })
-                    }
-                    placeholder='Nombre del instructor'
-                    required
-                  />
-                </div>
-              </div>
+            <Tabs
+              value={activeTab}
+              onValueChange={value =>
+                setActiveTab(value as 'individual' | 'season')
+              }
+            >
+              <TabsList className='grid w-full grid-cols-2'>
+                <TabsTrigger value='individual'>Clase Individual</TabsTrigger>
+                <TabsTrigger value='season'>Temporada</TabsTrigger>
+              </TabsList>
 
-              <div className='grid grid-cols-3 gap-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='start_time'>Hora de Inicio</Label>
-                  <Input
-                    id='start_time'
-                    type='time'
-                    value={formData.start_time}
-                    onChange={e =>
-                      setFormData({ ...formData, start_time: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='end_time'>Hora de Fin</Label>
-                  <Input
-                    id='end_time'
-                    type='time'
-                    value={formData.end_time}
-                    onChange={e =>
-                      setFormData({ ...formData, end_time: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='capacity'>Capacidad</Label>
-                  <Input
-                    id='capacity'
-                    type='number'
-                    min='1'
-                    max='50'
-                    value={formData.capacity}
-                    onChange={e =>
-                      setFormData({
-                        ...formData,
-                        capacity: parseInt(e.target.value),
-                      })
-                    }
-                    required
-                  />
-                </div>
-              </div>
+              {/* Pestaña: Clase Individual */}
+              <TabsContent value='individual'>
+                <form onSubmit={handleSubmit} className='space-y-4'>
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div className='space-y-2'>
+                      <Label htmlFor='date'>Fecha</Label>
+                      <Input
+                        id='date'
+                        type='date'
+                        value={formData.date}
+                        onChange={e =>
+                          setFormData({ ...formData, date: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label htmlFor='instructor'>Instructor</Label>
+                      <Input
+                        id='instructor'
+                        value={formData.instructor_name}
+                        onChange={e =>
+                          setFormData({
+                            ...formData,
+                            instructor_name: e.target.value,
+                          })
+                        }
+                        placeholder='Nombre del instructor'
+                        required
+                      />
+                    </div>
+                  </div>
 
-              <div className='grid grid-cols-3 gap-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='level'>Nivel</Label>
-                  <Select
-                    value={formData.level || 'mixed'}
-                    onValueChange={value =>
-                      setFormData({
-                        ...formData,
-                        level: value as 'alpha' | 'beta' | 'mixed',
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='alpha'>Alpha</SelectItem>
-                      <SelectItem value='beta'>Beta</SelectItem>
-                      <SelectItem value='mixed'>Mixto</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='status'>Estado</Label>
-                  <Select
-                    value={formData.status || 'scheduled'}
-                    onValueChange={value =>
-                      setFormData({
-                        ...formData,
-                        status: value as
-                          | 'scheduled'
-                          | 'confirmed'
-                          | 'cancelled'
-                          | 'completed',
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='scheduled'>Programada</SelectItem>
-                      <SelectItem value='confirmed'>Confirmada</SelectItem>
-                      <SelectItem value='cancelled'>Cancelada</SelectItem>
-                      <SelectItem value='completed'>Completada</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='field'>Cancha</Label>
-                  <Input
-                    id='field'
-                    value={formData.field || ''}
-                    onChange={e =>
-                      setFormData({
-                        ...formData,
-                        field: e.target.value || null,
-                      })
-                    }
-                    placeholder='Nombre de la cancha'
-                  />
-                </div>
-              </div>
+                  <div className='grid grid-cols-3 gap-4'>
+                    <div className='space-y-2'>
+                      <Label htmlFor='start_time'>Hora de Inicio</Label>
+                      <Input
+                        id='start_time'
+                        type='time'
+                        value={formData.start_time}
+                        onChange={e =>
+                          setFormData({
+                            ...formData,
+                            start_time: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label htmlFor='end_time'>Hora de Fin</Label>
+                      <Input
+                        id='end_time'
+                        type='time'
+                        value={formData.end_time}
+                        onChange={e =>
+                          setFormData({ ...formData, end_time: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label htmlFor='capacity'>Capacidad</Label>
+                      <Input
+                        id='capacity'
+                        type='number'
+                        min='1'
+                        max='50'
+                        value={formData.capacity}
+                        onChange={e =>
+                          setFormData({
+                            ...formData,
+                            capacity: parseInt(e.target.value),
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                  </div>
 
-              <div className='space-y-2'>
-                <Label htmlFor='notes'>Notas</Label>
-                <Input
-                  id='notes'
-                  value={formData.notes || ''}
-                  onChange={e =>
-                    setFormData({
-                      ...formData,
-                      notes: e.target.value || null,
-                    })
-                  }
-                  placeholder='Notas adicionales'
-                />
-              </div>
+                  <div className='grid grid-cols-3 gap-4'>
+                    <div className='space-y-2'>
+                      <Label htmlFor='level'>Nivel</Label>
+                      <Select
+                        value={formData.level || 'mixed'}
+                        onValueChange={value =>
+                          setFormData({
+                            ...formData,
+                            level: value as 'alpha' | 'beta' | 'mixed',
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='alpha'>Alpha</SelectItem>
+                          <SelectItem value='beta'>Beta</SelectItem>
+                          <SelectItem value='mixed'>Mixto</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className='space-y-2'>
+                      <Label htmlFor='status'>Estado</Label>
+                      <Select
+                        value={formData.status || 'scheduled'}
+                        onValueChange={value =>
+                          setFormData({
+                            ...formData,
+                            status: value as
+                              | 'scheduled'
+                              | 'confirmed'
+                              | 'cancelled'
+                              | 'completed',
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='scheduled'>Programada</SelectItem>
+                          <SelectItem value='confirmed'>Confirmada</SelectItem>
+                          <SelectItem value='cancelled'>Cancelada</SelectItem>
+                          <SelectItem value='completed'>Completada</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className='space-y-2'>
+                      <Label htmlFor='field'>Cancha</Label>
+                      <Input
+                        id='field'
+                        value={formData.field || ''}
+                        onChange={e =>
+                          setFormData({
+                            ...formData,
+                            field: e.target.value || null,
+                          })
+                        }
+                        placeholder='Nombre de la cancha'
+                      />
+                    </div>
+                  </div>
 
-              <div className='flex gap-2'>
-                <Button
-                  type='button'
-                  onClick={() => {
-                    console.log('🖱️ Botón clickeado directamente!')
-                    // Crear un evento sintético para handleSubmit
-                    const syntheticEvent = {
-                      preventDefault: () => {},
-                    } as React.FormEvent
-                    handleSubmit(syntheticEvent)
-                  }}
-                >
-                  {editingClass ? 'Actualizar' : 'Crear'} Clase
-                </Button>
-                <Button type='button' variant='outline' onClick={resetForm}>
-                  Cancelar
-                </Button>
-              </div>
-            </form>
+                  <div className='space-y-2'>
+                    <Label htmlFor='notes'>Notas</Label>
+                    <Input
+                      id='notes'
+                      value={formData.notes || ''}
+                      onChange={e =>
+                        setFormData({
+                          ...formData,
+                          notes: e.target.value || null,
+                        })
+                      }
+                      placeholder='Notas adicionales'
+                    />
+                  </div>
+
+                  <div className='flex gap-2'>
+                    <Button
+                      type='button'
+                      onClick={() => {
+                        console.log('🖱️ Botón clickeado directamente!')
+                        // Crear un evento sintético para handleSubmit
+                        const syntheticEvent = {
+                          preventDefault: () => {},
+                        } as React.FormEvent
+                        handleSubmit(syntheticEvent)
+                      }}
+                    >
+                      {editingClass ? 'Actualizar' : 'Crear'} Clase
+                    </Button>
+                    <Button type='button' variant='outline' onClick={resetForm}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </form>
+              </TabsContent>
+
+              {/* Pestaña: Temporada */}
+              <TabsContent value='season'>
+                <form className='space-y-4'>
+                  <div className='space-y-2'>
+                    <Label htmlFor='season-name'>Nombre de la Temporada</Label>
+                    <Input
+                      id='season-name'
+                      value={seasonData.name}
+                      onChange={e =>
+                        setSeasonData({ ...seasonData, name: e.target.value })
+                      }
+                      placeholder='Ej: Clases Alpha - Septiembre 2025'
+                    />
+                  </div>
+
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div className='space-y-2'>
+                      <Label htmlFor='start-date'>Fecha de Inicio</Label>
+                      <Input
+                        id='start-date'
+                        type='date'
+                        value={seasonData.startDate}
+                        onChange={e =>
+                          setSeasonData({
+                            ...seasonData,
+                            startDate: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label htmlFor='end-date'>Fecha de Fin</Label>
+                      <Input
+                        id='end-date'
+                        type='date'
+                        value={seasonData.endDate}
+                        onChange={e =>
+                          setSeasonData({
+                            ...seasonData,
+                            endDate: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className='space-y-2'>
+                    <Label>Días de la Semana</Label>
+                    <div className='flex gap-2 flex-wrap'>
+                      {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(
+                        (day, index) => (
+                          <Button
+                            key={index}
+                            type='button'
+                            variant={
+                              seasonData.daysOfWeek.includes(index)
+                                ? 'default'
+                                : 'outline'
+                            }
+                            className='w-16'
+                            onClick={() => {
+                              const newDays = seasonData.daysOfWeek.includes(
+                                index
+                              )
+                                ? seasonData.daysOfWeek.filter(d => d !== index)
+                                : [...seasonData.daysOfWeek, index]
+                              setSeasonData({
+                                ...seasonData,
+                                daysOfWeek: newDays,
+                              })
+                            }}
+                          >
+                            {day}
+                          </Button>
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div className='space-y-2'>
+                      <Label htmlFor='season-start-time'>Hora de Inicio</Label>
+                      <Input
+                        id='season-start-time'
+                        type='time'
+                        value={seasonData.startTime}
+                        onChange={e =>
+                          setSeasonData({
+                            ...seasonData,
+                            startTime: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label htmlFor='season-end-time'>Hora de Fin</Label>
+                      <Input
+                        id='season-end-time'
+                        type='time'
+                        value={seasonData.endTime}
+                        onChange={e =>
+                          setSeasonData({
+                            ...seasonData,
+                            endTime: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div className='space-y-2'>
+                      <Label htmlFor='season-instructor'>Instructor</Label>
+                      <Input
+                        id='season-instructor'
+                        value={seasonData.instructorName}
+                        onChange={e =>
+                          setSeasonData({
+                            ...seasonData,
+                            instructorName: e.target.value,
+                          })
+                        }
+                        placeholder='Nombre del instructor'
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label htmlFor='season-capacity'>Capacidad</Label>
+                      <Input
+                        id='season-capacity'
+                        type='number'
+                        min='1'
+                        max='20'
+                        value={seasonData.capacity}
+                        onChange={e =>
+                          setSeasonData({
+                            ...seasonData,
+                            capacity: parseInt(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div className='space-y-2'>
+                      <Label htmlFor='season-level'>Nivel</Label>
+                      <Select
+                        value={seasonData.level}
+                        onValueChange={value =>
+                          setSeasonData({
+                            ...seasonData,
+                            level: value as 'alpha' | 'beta' | 'mixed',
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='alpha'>Alpha</SelectItem>
+                          <SelectItem value='beta'>Beta</SelectItem>
+                          <SelectItem value='mixed'>Mixto</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className='space-y-2'>
+                      <Label htmlFor='season-field'>Campo</Label>
+                      <Input
+                        id='season-field'
+                        value={seasonData.field}
+                        onChange={e =>
+                          setSeasonData({
+                            ...seasonData,
+                            field: e.target.value,
+                          })
+                        }
+                        placeholder='Ej: Campo A'
+                      />
+                    </div>
+                  </div>
+
+                  <div className='space-y-2'>
+                    <Label htmlFor='season-notes'>Notas</Label>
+                    <Input
+                      id='season-notes'
+                      value={seasonData.notes}
+                      onChange={e =>
+                        setSeasonData({ ...seasonData, notes: e.target.value })
+                      }
+                      placeholder='Notas adicionales'
+                    />
+                  </div>
+
+                  <div className='flex gap-2'>
+                    <Button
+                      type='button'
+                      disabled={loading}
+                      onClick={generateRecurringClasses}
+                    >
+                      {loading ? 'Creando...' : 'Crear Temporada'}
+                    </Button>
+                    <Button type='button' variant='outline' onClick={resetForm}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </form>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       )}

@@ -90,7 +90,15 @@ export function Navigation() {
             </Link>
             <div className='flex items-center space-x-4'>
               <span className='text-sm'>{user.email}</span>
-              <Button variant='outline' onClick={() => signOut()}>
+              <Button
+                variant='outline'
+                onClick={() => {
+                  console.log(
+                    '🔍 Navigation: Botón salir clickeado (sin perfil)'
+                  )
+                  signOut()
+                }}
+              >
                 <LogOut className='mr-2 h-4 w-4' />
                 Salir
               </Button>
@@ -141,7 +149,13 @@ export function Navigation() {
               </Avatar>
               <span className='text-sm font-medium'>{profile.full_name}</span>
             </div>
-            <Button variant='outline' onClick={() => signOut()}>
+            <Button
+              variant='outline'
+              onClick={() => {
+                console.log('🔍 Navigation: Botón salir clickeado')
+                signOut()
+              }}
+            >
               <LogOut className='mr-2 h-4 w-4' />
               Salir
             </Button>
