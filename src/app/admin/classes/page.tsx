@@ -38,7 +38,9 @@ import {
   Edit,
   Trash2,
   CheckCircle,
+  Eye,
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 type UserProfile = {
   id: string
@@ -101,6 +103,7 @@ export default function ClassesPage() {
   })
 
   const supabase = createClientSupabase()
+  const router = useRouter()
 
   const getCurrentUserProfile = async (): Promise<UserProfile> => {
     try {
@@ -1016,7 +1019,7 @@ export default function ClassesPage() {
                       )}
                     </div>
 
-                    <div className='flex gap-2'>
+                    <div className='flex items-center gap-2'>
                       <Button
                         variant='outline'
                         size='sm'
@@ -1030,6 +1033,16 @@ export default function ClassesPage() {
                         onClick={() => handleDelete(classItem.id)}
                       >
                         <Trash2 className='h-4 w-4' />
+                      </Button>
+                      <Button
+                        variant='ghost'
+                        size='icon'
+                        onClick={() =>
+                          router.push(`/admin/classes/${classItem.id}`)
+                        }
+                        title='Ver detalles de la clase'
+                      >
+                        <Eye className='h-4 w-4' />
                       </Button>
                     </div>
                   </div>
@@ -1116,6 +1129,16 @@ export default function ClassesPage() {
                         onClick={() => handleDelete(classItem.id)}
                       >
                         <Trash2 className='h-4 w-4' />
+                      </Button>
+                      <Button
+                        variant='ghost'
+                        size='icon'
+                        onClick={() =>
+                          router.push(`/admin/classes/${classItem.id}`)
+                        }
+                        title='Ver detalles de la clase'
+                      >
+                        <Eye className='h-4 w-4' />
                       </Button>
                     </div>
                   </div>
@@ -1292,6 +1315,17 @@ export default function ClassesPage() {
                           }}
                         >
                           <Trash2 className='h-4 w-4' />
+                        </Button>
+                        <Button
+                          variant='ghost'
+                          size='icon'
+                          onClick={e => {
+                            e.stopPropagation()
+                            router.push(`/admin/classes/${classItem.id}`)
+                          }}
+                          title='Ver detalles de la clase'
+                        >
+                          <Eye className='h-4 w-4' />
                         </Button>
                       </div>
                     </div>

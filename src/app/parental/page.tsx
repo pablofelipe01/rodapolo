@@ -245,8 +245,12 @@ export default function ParentalDashboard() {
     try {
       setLoading(true)
 
-      // Generar código único
-      const uniqueCode = `JUNIOR${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+      // Generar código único de 7 caracteres
+      const randomCode = Math.random()
+        .toString(36)
+        .substring(2, 9)
+        .toUpperCase()
+      const uniqueCode = randomCode.padEnd(7, '0') // Asegurar que tenga exactamente 7 caracteres
 
       const { error } = await supabase
         .from('junior_profiles')
