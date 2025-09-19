@@ -6,6 +6,7 @@ import { createClientSupabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Card,
   CardContent,
@@ -89,7 +90,7 @@ export default function ParentalDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null)
-  const [selectedJunior, setSelectedJunior] = useState<string>('')
+  const [selectedJuniors, setSelectedJuniors] = useState<string[]>([])
   const [showBookingModal, setShowBookingModal] = useState(false)
   const [bookingLoading, setBookingLoading] = useState(false)
   const [showAddChildModal, setShowAddChildModal] = useState(false)
@@ -165,39 +166,63 @@ export default function ParentalDashboard() {
   }, [profile?.id, supabase])
 
   // Función para crear una reserva
-  const createBooking = async (classId: string, juniorId: string) => {
-    if (!profile?.id) return
+  const createBooking = async (classId: string, juniorIds: string[]) => {
+    if (!profile?.id || juniorIds.length === 0) return
 
     try {
       setBookingLoading(true)
 
-      console.log('🔍 Creando reserva con parámetros:', {
-        p_junior_id: juniorId,
-        p_class_id: classId,
-      })
+      const successCount = []
+      const errors = []
 
-      const { data, error } = await supabase.rpc('create_reservation_final', {
-        p_junior_id: juniorId,
-        p_class_id: classId,
-      })
+      console.log('🔍 Creando reservas para:', juniorIds.length, 'hijo(s)')
 
-      console.log('🔍 Respuesta de create_reservation_final:', { data, error })
+      // Crear una reserva para cada hijo seleccionado
+      for (const juniorId of juniorIds) {
+        try {
+          console.log('🔍 Creando reserva con parámetros:', {
+            p_junior_id: juniorId,
+            p_class_id: classId,
+          })
 
-      // Revisar si la función devolvió un error dentro de data
-      if (data && data.success === false) {
-        console.error('🚨 Error dentro de data:', data.error)
-        console.error('🔍 Debug info:', data.debug)
-        console.error('🔍 Parental ID:', data.parental_id)
-        console.error('🔍 Full data object:', JSON.stringify(data, null, 2))
-        throw new Error(`Database error: ${data.error}`)
+          const { data, error } = await supabase.rpc(
+            'create_reservation_final',
+            {
+              p_junior_id: juniorId,
+              p_class_id: classId,
+            }
+          )
+
+          console.log('🔍 Respuesta de create_reservation_final:', {
+            data,
+            error,
+          })
+
+          // Revisar si la función devolvió un error dentro de data
+          if (data && data.success === false) {
+            console.error('🚨 Error dentro de data:', data.error)
+            console.error('🔍 Debug info:', data.debug)
+            console.error('🔍 Parental ID:', data.parental_id)
+            console.error('🔍 Full data object:', JSON.stringify(data, null, 2))
+            errors.push(`Error para ${juniorId}: ${data.error}`)
+            continue
+          }
+
+          if (error) {
+            console.error('🚨 Error en create_reservation_final:', error)
+            errors.push(`Error para ${juniorId}: ${error.message}`)
+            continue
+          }
+
+          console.log('✅ Booking creado exitosamente para junior:', juniorId)
+          successCount.push(juniorId)
+        } catch (err: unknown) {
+          console.error('🚨 Error creating booking para junior:', juniorId, err)
+          const errorMessage =
+            err instanceof Error ? err.message : 'Error desconocido'
+          errors.push(`Error para ${juniorId}: ${errorMessage}`)
+        }
       }
-
-      if (error) {
-        console.error('🚨 Error en create_reservation_final:', error)
-        throw error
-      }
-
-      console.log('✅ Booking creado exitosamente:', data)
 
       // Refrescar datos
       await Promise.all([fetchBookings(), fetchUpcomingClasses()])
@@ -205,10 +230,25 @@ export default function ParentalDashboard() {
       setError(null)
       setShowBookingModal(false)
       setSelectedClass(null)
-      setSelectedJunior('')
-      alert('¡Reserva creada exitosamente!')
+      setSelectedJuniors([])
+
+      // Mostrar mensaje basado en los resultados
+      if (successCount.length === juniorIds.length) {
+        alert(`¡${successCount.length} reserva(s) creada(s) exitosamente!`)
+      } else if (successCount.length > 0) {
+        alert(
+          `${successCount.length} de ${juniorIds.length} reservas creadas exitosamente. Algunos errores ocurrieron.`
+        )
+        if (errors.length > 0) {
+          console.error('🚨 Errores en algunas reservas:', errors)
+        }
+      } else {
+        throw new Error(
+          'No se pudo crear ninguna reserva: ' + errors.join(', ')
+        )
+      }
     } catch (err: unknown) {
-      console.error('🚨 Error creating booking:', err)
+      console.error('🚨 Error creating bookings:', err)
       console.error('🚨 Error type:', typeof err)
       console.error('🚨 Error constructor:', err?.constructor?.name)
 
@@ -218,7 +258,7 @@ export default function ParentalDashboard() {
       }
 
       const errorMessage =
-        err instanceof Error ? err.message : 'Error al crear la reserva'
+        err instanceof Error ? err.message : 'Error al crear las reservas'
       setError(errorMessage)
     } finally {
       setBookingLoading(false)
@@ -228,14 +268,25 @@ export default function ParentalDashboard() {
   // Función para abrir modal de reserva
   const openBookingModal = (classInfo: ClassInfo) => {
     setSelectedClass(classInfo)
-    setSelectedJunior('')
+    setSelectedJuniors([])
     setShowBookingModal(true)
   }
 
   // Función para confirmar reserva
   const handleConfirmBooking = async () => {
-    if (!selectedClass || !selectedJunior) return
-    await createBooking(selectedClass.id, selectedJunior)
+    if (!selectedClass || selectedJuniors.length === 0) return
+    await createBooking(selectedClass.id, selectedJuniors)
+  }
+
+  // Función para manejar selección múltiple de hijos
+  const toggleJuniorSelection = (juniorId: string) => {
+    setSelectedJuniors(prev => {
+      if (prev.includes(juniorId)) {
+        return prev.filter(id => id !== juniorId)
+      } else {
+        return [...prev, juniorId]
+      }
+    })
   }
 
   // Función para crear un nuevo hijo
@@ -742,7 +793,7 @@ export default function ParentalDashboard() {
           <DialogHeader>
             <DialogTitle>Reservar Clase</DialogTitle>
             <DialogDescription>
-              Selecciona para cuál de tus hijos quieres reservar esta clase
+              Selecciona para cuál(es) de tus hijos quieres reservar esta clase
             </DialogDescription>
           </DialogHeader>
 
@@ -768,37 +819,52 @@ export default function ParentalDashboard() {
                 </div>
               </div>
 
-              <div className='space-y-2'>
+              <div className='space-y-3'>
                 <label className='text-sm font-medium'>
-                  Seleccionar hijo/a:
+                  Seleccionar hijo(s):
                 </label>
-                <Select
-                  value={selectedJunior}
-                  onValueChange={setSelectedJunior}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder='Elige un hijo/a...' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {children
-                      .filter(
-                        child =>
-                          child.active &&
-                          (selectedClass.level === 'mixed' ||
-                            child.level === selectedClass.level)
-                      )
-                      .map(child => (
-                        <SelectItem key={child.id} value={child.id}>
-                          <div className='flex items-center gap-2'>
-                            <span>{child.full_name}</span>
-                            <Badge variant='outline'>
-                              {child.level.toUpperCase()}
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                <div className='space-y-3 max-h-48 overflow-y-auto'>
+                  {children
+                    .filter(
+                      child =>
+                        child.active &&
+                        (selectedClass.level === 'mixed' ||
+                          child.level === selectedClass.level)
+                    )
+                    .map(child => (
+                      <div
+                        key={child.id}
+                        className='flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50'
+                      >
+                        <Checkbox
+                          id={`junior-${child.id}`}
+                          checked={selectedJuniors.includes(child.id)}
+                          onCheckedChange={() =>
+                            toggleJuniorSelection(child.id)
+                          }
+                        />
+                        <label
+                          htmlFor={`junior-${child.id}`}
+                          className='flex items-center gap-2 cursor-pointer flex-1'
+                        >
+                          <span>{child.full_name}</span>
+                          <Badge variant='outline'>
+                            {child.level.toUpperCase()}
+                          </Badge>
+                        </label>
+                      </div>
+                    ))}
+                </div>
+                {children.filter(
+                  child =>
+                    child.active &&
+                    (selectedClass.level === 'mixed' ||
+                      child.level === selectedClass.level)
+                ).length === 0 && (
+                  <p className='text-sm text-gray-500 italic'>
+                    No tienes hijos disponibles para esta clase.
+                  </p>
+                )}
               </div>
 
               <div className='flex justify-end gap-2 pt-4'>
@@ -810,9 +876,13 @@ export default function ParentalDashboard() {
                 </Button>
                 <Button
                   onClick={handleConfirmBooking}
-                  disabled={!selectedJunior || bookingLoading}
+                  disabled={selectedJuniors.length === 0 || bookingLoading}
                 >
-                  {bookingLoading ? 'Reservando...' : 'Confirmar Reserva'}
+                  {bookingLoading
+                    ? 'Reservando...'
+                    : selectedJuniors.length === 1
+                      ? 'Confirmar Reserva'
+                      : `Confirmar ${selectedJuniors.length} Reservas`}
                 </Button>
               </div>
             </div>
