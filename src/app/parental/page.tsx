@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { getStripe } from '@/lib/stripe'
 import { useAuth } from '@/providers/AuthProvider'
 import { createClientSupabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -41,6 +42,8 @@ import {
   Plus,
   BookOpen,
   Trophy,
+  Ticket,
+  CreditCard,
 } from 'lucide-react'
 
 type JuniorProfile = {
@@ -100,6 +103,9 @@ export default function ParentalDashboard() {
     birth_date: '',
     level: 'alpha' as 'alpha' | 'beta',
   })
+  const [availableTickets, setAvailableTickets] = useState(0)
+  const [showTicketModal, setShowTicketModal] = useState(false)
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null)
 
   const supabase = createClientSupabase()
 
@@ -162,6 +168,40 @@ export default function ParentalDashboard() {
       setBookings(data || [])
     } catch (err) {
       console.error('Error fetching bookings:', err)
+    }
+  }, [profile?.id, supabase])
+
+  // Función para obtener balance de tickets disponibles
+  const fetchAvailableTickets = useCallback(async () => {
+    if (!profile?.id) return
+
+    try {
+      // Primero obtenemos las compras de tickets del usuario
+      const { data: purchases, error: purchasesError } = await supabase
+        .from('purchased_tickets')
+        .select('id')
+        .eq('parental_id', profile.id)
+
+      if (purchasesError) throw purchasesError
+
+      if (!purchases || purchases.length === 0) {
+        setAvailableTickets(0)
+        return
+      }
+
+      // Luego contamos los ticket_units disponibles de esas compras
+      const purchaseIds = purchases.map(p => p.id)
+      const { data: tickets, error: ticketsError } = await supabase
+        .from('ticket_units')
+        .select('*', { count: 'exact' })
+        .in('purchase_id', purchaseIds)
+        .eq('status', 'available')
+
+      if (ticketsError) throw ticketsError
+      setAvailableTickets(tickets?.length || 0)
+    } catch (err) {
+      console.error('Error fetching tickets:', err)
+      setAvailableTickets(0)
     }
   }, [profile?.id, supabase])
 
@@ -340,6 +380,46 @@ export default function ParentalDashboard() {
     }
   }
 
+  // Función para comprar tickets
+  const purchaseTickets = async (packageType: string) => {
+    if (!profile?.id) return
+
+    try {
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          packageType,
+          parentalId: profile.id,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al crear sesión de pago')
+      }
+
+      const stripe = await getStripe()
+      if (!stripe) {
+        throw new Error('Stripe no está disponible')
+      }
+
+      const { error } = await stripe.redirectToCheckout({
+        sessionId: data.sessionId,
+      })
+
+      if (error) {
+        throw new Error(error.message)
+      }
+    } catch (err) {
+      console.error('Error purchasing tickets:', err)
+      alert('Error al procesar la compra. Por favor, intenta de nuevo.')
+    }
+  }
+
   // Función para abrir modal de agregar hijo
   const openAddChildModal = () => {
     setShowAddChildModal(true)
@@ -350,8 +430,33 @@ export default function ParentalDashboard() {
       fetchChildren()
       fetchUpcomingClasses()
       fetchBookings()
+      fetchAvailableTickets()
     }
-  }, [profile, fetchChildren, fetchUpcomingClasses, fetchBookings])
+  }, [
+    profile,
+    fetchChildren,
+    fetchUpcomingClasses,
+    fetchBookings,
+    fetchAvailableTickets,
+  ])
+
+  // Verificar estado del pago en la URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const payment = urlParams.get('payment')
+
+    if (payment === 'success') {
+      setPaymentStatus('success')
+      // Actualizar tickets después del pago exitoso
+      fetchAvailableTickets()
+      // Limpiar URL
+      window.history.replaceState({}, '', '/parental')
+    } else if (payment === 'cancelled') {
+      setPaymentStatus('cancelled')
+      // Limpiar URL
+      window.history.replaceState({}, '', '/parental')
+    }
+  }, [])
 
   // Función para obtener estadísticas
   const getStats = () => {
@@ -432,8 +537,25 @@ export default function ParentalDashboard() {
         </Alert>
       )}
 
+      {/* Alertas de estado de pago */}
+      {paymentStatus === 'success' && (
+        <Alert className='border-green-200 bg-green-50'>
+          <AlertDescription className='text-green-800'>
+            ¡Pago exitoso! Tus tickets han sido agregados a tu cuenta.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {paymentStatus === 'cancelled' && (
+        <Alert className='border-yellow-200 bg-yellow-50'>
+          <AlertDescription className='text-yellow-800'>
+            Pago cancelado. Puedes intentar nuevamente cuando quieras.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Estadísticas */}
-      <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
+      <div className='grid grid-cols-1 md:grid-cols-5 gap-4'>
         <Card>
           <CardContent className='p-6'>
             <div className='flex items-center'>
@@ -494,6 +616,32 @@ export default function ParentalDashboard() {
                   {stats.betaChildren}
                 </p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className='p-6'>
+            <div className='flex items-center'>
+              <div className='rounded-full bg-indigo-500 p-3'>
+                <Ticket className='h-6 w-6 text-white' />
+              </div>
+              <div className='ml-4'>
+                <p className='text-sm font-medium text-gray-600'>Tickets</p>
+                <p className='text-2xl font-bold text-gray-900'>
+                  {availableTickets}
+                </p>
+              </div>
+            </div>
+            <div className='mt-3'>
+              <Button
+                size='sm'
+                className='w-full bg-indigo-600 hover:bg-indigo-700'
+                onClick={() => setShowTicketModal(true)}
+              >
+                <CreditCard className='h-4 w-4 mr-2' />
+                Comprar Tickets
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -980,6 +1128,117 @@ export default function ParentalDashboard() {
               >
                 {loading ? 'Creando...' : 'Crear Hijo'}
               </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de compra de tickets */}
+      <Dialog open={showTicketModal} onOpenChange={setShowTicketModal}>
+        <DialogContent className='max-w-md'>
+          <DialogHeader>
+            <DialogTitle>Comprar Tickets</DialogTitle>
+            <DialogDescription>
+              Selecciona un paquete de tickets para las clases de tus hijos
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='space-y-4'>
+            {/* Mostrar tickets actuales */}
+            <div className='bg-indigo-50 p-4 rounded-lg'>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <p className='font-medium text-indigo-900'>
+                    Tickets Disponibles
+                  </p>
+                  <p className='text-sm text-indigo-600'>
+                    Puedes usar estos tickets para reservar clases
+                  </p>
+                </div>
+                <div className='text-2xl font-bold text-indigo-900'>
+                  {availableTickets}
+                </div>
+              </div>
+            </div>
+
+            {/* Paquetes de tickets */}
+            <div className='space-y-3'>
+              <h4 className='font-medium'>Paquetes Disponibles</h4>
+
+              <Card className='border-2 hover:border-indigo-200 cursor-pointer transition-colors'>
+                <CardContent className='p-4'>
+                  <div className='flex items-center justify-between'>
+                    <div>
+                      <h5 className='font-semibold'>Paquete Básico</h5>
+                      <p className='text-sm text-gray-600'>5 tickets</p>
+                    </div>
+                    <div className='text-right'>
+                      <p className='text-lg font-bold'>$25.00</p>
+                      <p className='text-xs text-gray-500'>$5.00 por ticket</p>
+                    </div>
+                  </div>
+                  <Button
+                    className='w-full mt-3 bg-indigo-600 hover:bg-indigo-700'
+                    onClick={() => purchaseTickets('basic')}
+                  >
+                    Comprar 5 Tickets
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className='border-2 hover:border-indigo-200 cursor-pointer transition-colors'>
+                <CardContent className='p-4'>
+                  <div className='flex items-center justify-between'>
+                    <div>
+                      <h5 className='font-semibold'>Paquete Popular</h5>
+                      <p className='text-sm text-gray-600'>10 tickets</p>
+                      <Badge variant='secondary' className='mt-1'>
+                        Más vendido
+                      </Badge>
+                    </div>
+                    <div className='text-right'>
+                      <p className='text-lg font-bold'>$45.00</p>
+                      <p className='text-xs text-gray-500'>$4.50 por ticket</p>
+                      <p className='text-xs text-green-600 font-medium'>
+                        Ahorra $5.00
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    className='w-full mt-3 bg-indigo-600 hover:bg-indigo-700'
+                    onClick={() => purchaseTickets('popular')}
+                  >
+                    Comprar 10 Tickets
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className='border-2 hover:border-indigo-200 cursor-pointer transition-colors'>
+                <CardContent className='p-4'>
+                  <div className='flex items-center justify-between'>
+                    <div>
+                      <h5 className='font-semibold'>Paquete Premium</h5>
+                      <p className='text-sm text-gray-600'>20 tickets</p>
+                      <Badge variant='secondary' className='mt-1'>
+                        Mejor valor
+                      </Badge>
+                    </div>
+                    <div className='text-right'>
+                      <p className='text-lg font-bold'>$80.00</p>
+                      <p className='text-xs text-gray-500'>$4.00 por ticket</p>
+                      <p className='text-xs text-green-600 font-medium'>
+                        Ahorra $20.00
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    className='w-full mt-3 bg-indigo-600 hover:bg-indigo-700'
+                    onClick={() => purchaseTickets('premium')}
+                  >
+                    Comprar 20 Tickets
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </DialogContent>
