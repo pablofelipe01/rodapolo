@@ -18,6 +18,7 @@ export function getServerStripe() {
 
   if (!serverStripe) {
     serverStripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      // @ts-expect-error - Using older Stripe API version for compatibility
       apiVersion: '2024-04-10',
     })
   }

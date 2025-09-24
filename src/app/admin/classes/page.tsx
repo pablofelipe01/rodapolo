@@ -234,6 +234,7 @@ export default function ClassesPage() {
 
         const { data, error } = await supabase
           .from('classes')
+          // @ts-expect-error - Temporary ignore for type inference issue
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .update(updateData as any)
           .eq('id', editingClass.id)
@@ -259,6 +260,7 @@ export default function ClassesPage() {
 
         const { data, error } = await supabase
           .from('classes')
+          // @ts-expect-error - Temporary ignore for type inference issue
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .insert([insertData as any])
           .select()
