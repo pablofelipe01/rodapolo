@@ -10,11 +10,22 @@ const supabaseAdmin = createClient(
 )
 
 export async function POST(request: NextRequest) {
+  // Log para verificar que el webhook está recibiendo requests
+  console.log('🔄 Webhook request received at:', new Date().toISOString())
+  
   const body = await request.text()
   const headersList = await headers()
   const signature = headersList.get('stripe-signature')
 
+  console.log('📝 Request details:', {
+    hasBody: !!body,
+    bodyLength: body.length,
+    hasSignature: !!signature,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ? 'Present' : 'Missing',
+  })
+
   if (!signature) {
+    console.error('❌ Missing Stripe signature')
     return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
   }
 
@@ -27,8 +38,9 @@ export async function POST(request: NextRequest) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     )
+    console.log('✅ Webhook signature verified, event type:', event.type)
   } catch (err) {
-    console.error('Webhook signature verification failed:', err)
+    console.error('❌ Webhook signature verification failed:', err)
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
@@ -103,7 +115,10 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+  } else {
+    console.log('ℹ️ Received event of type:', event.type, '- not processed')
   }
 
+  console.log('✅ Webhook processed successfully')
   return NextResponse.json({ received: true })
 }
