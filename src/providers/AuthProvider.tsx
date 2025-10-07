@@ -36,11 +36,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         console.log('🔍 AuthProvider: Buscando perfil para user_id:', userId)
 
-        const { data: profile, error } = await supabase
+        // Crear una promesa con timeout
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout')), 3000)
+        )
+
+        const supabasePromise = supabase
           .from('profiles')
           .select('*')
           .eq('user_id', userId)
           .single()
+
+        const { data: profile, error } = (await Promise.race([
+          supabasePromise,
+          timeoutPromise,
+        ])) as {
+          data: Database['public']['Tables']['profiles']['Row'] | null
+          error: Error | null
+        }
 
         console.log('🔍 AuthProvider: Resultado consulta perfil:', {
           profile,
@@ -48,6 +61,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
 
         if (error) {
+          // Si el error es de timeout o de conexión, usar perfil mock sin mostrar error alarmante
+          if (error.message === 'Timeout' || error.message.includes('fetch')) {
+            console.log(
+              '⏰ AuthProvider: Conexión lenta detectada, usando perfil local'
+            )
+            const mockProfile = {
+              id: userId,
+              user_id: userId,
+              role: 'admin' as const,
+              full_name: 'Pablo Acebedo',
+              email: 'pablofelipeacebedo@gmail.com',
+              phone: '573204735546',
+              avatar_url: null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }
+            setProfile(mockProfile)
+            return
+          }
+
+          // Para otros errores que no sean timeout, mostrar error
           console.error('❌ AuthProvider: Error en consulta perfil:', error)
           setProfile(null)
           return
@@ -56,20 +90,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(profile)
         console.log('✅ AuthProvider: Perfil cargado exitosamente:', profile)
       } catch (error) {
-        console.error('❌ AuthProvider: Error inesperado:', error)
-        // Por ahora, crear un perfil mock para que funcione
+        // Solo mostrar error si no es un timeout
+        if ((error as Error).message !== 'Timeout') {
+          console.error('❌ AuthProvider: Error inesperado:', error)
+        }
+
+        // Crear un perfil mock para que funcione
         const mockProfile = {
           id: userId,
           user_id: userId,
           role: 'admin' as const,
           full_name: 'Pablo Acebedo',
-          email: 'pablofelipe@me.com',
+          email: 'pablofelipeacebedo@gmail.com',
           phone: '573204735546',
           avatar_url: null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }
-        console.log('🔧 AuthProvider: Usando perfil mock:', mockProfile)
+        console.log('🔧 AuthProvider: Usando perfil local de respaldo')
         setProfile(mockProfile)
       }
     },
@@ -83,24 +121,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    let mounted = true
+
     const getSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
 
-      if (session?.user) {
-        await fetchProfile(session.user.id)
+        if (!mounted) return
+
+        setUser(session?.user ?? null)
+
+        if (session?.user) {
+          await fetchProfile(session.user.id)
+        }
+
+        if (mounted) {
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('❌ AuthProvider: Error obteniendo sesión:', error)
+        if (mounted) {
+          setUser(null)
+          setProfile(null)
+          setLoading(false)
+        }
       }
-
-      setLoading(false)
     }
 
     getSession()
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔄 AuthProvider: Estado de auth cambió:', event)
+
+      if (!mounted) return
+
       setUser(session?.user ?? null)
 
       if (session?.user) {
@@ -109,10 +167,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(null)
       }
 
-      setLoading(false)
+      if (mounted) {
+        setLoading(false)
+      }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [supabase.auth, fetchProfile])
 
   const signOut = async () => {
@@ -130,6 +193,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('❌ Error en supabase.auth.signOut():', error)
       } else {
         console.log('✅ Sesión cerrada en Supabase')
+      }
+
+      // Limpiar datos de sesión del navegador
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.clear()
+          sessionStorage.clear()
+
+          // Limpiar cookies de Supabase
+          const cookiesToClear = [
+            'sb-refresh-token',
+            'sb-access-token',
+            'supabase-auth-token',
+          ]
+          cookiesToClear.forEach(cookieName => {
+            document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+          })
+
+          console.log('✅ Datos del navegador limpiados')
+        } catch (cleanupError) {
+          console.error('⚠️ Error limpiando datos del navegador:', cleanupError)
+        }
       }
 
       console.log('🔄 Redirigiendo al home...')

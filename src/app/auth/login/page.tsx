@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClientSupabase } from '@/lib/supabase'
+import { emergencySessionReset } from '@/lib/session-utils'
 import { MainLayout } from '@/components/layouts/MainLayout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,7 +17,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2 } from 'lucide-react'
+import { Loader2, RefreshCw } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -36,28 +37,65 @@ export default function LoginPage() {
     try {
       console.log('🔄 Llamando a supabase.auth.signInWithPassword...')
 
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Crear timeout para el login
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Login timeout')), 10000)
+      )
+
+      const loginPromise = supabase.auth.signInWithPassword({
         email,
         password,
       })
+
+      const { data, error } = (await Promise.race([
+        loginPromise,
+        timeoutPromise,
+      ])) as {
+        data: { user: { id: string } | null; session: unknown } | null
+        error: Error | null
+      }
 
       console.log('🔐 Respuesta de Supabase:', { data, error })
 
       if (error) {
         console.error('❌ Error de autenticación:', error)
-        setError(error.message)
+
+        if (error.message === 'Login timeout') {
+          setError(
+            'La conexión está tardando demasiado. Por favor, intenta de nuevo.'
+          )
+        } else {
+          setError(error.message)
+        }
         return
       }
 
       if (data.user) {
         console.log('✅ Usuario autenticado:', data.user.id)
+
+        // Dar tiempo para que el AuthProvider procese la sesión
+        console.log('⏳ Esperando procesamiento de sesión...')
+        await new Promise(resolve => setTimeout(resolve, 1000))
+
         console.log('🔄 Redirigiendo a /')
         // El middleware se encargará de redirigir al dashboard apropiado
         router.push('/')
+
+        // Forzar recarga después de un momento para asegurar que el estado se actualice
+        setTimeout(() => {
+          window.location.href = '/'
+        }, 2000)
       }
     } catch (error) {
       console.error('❌ Error inesperado en catch:', error)
-      setError('Error inesperado al iniciar sesión')
+
+      if ((error as Error).message === 'Login timeout') {
+        setError(
+          'La conexión está tardando demasiado. Por favor, intenta de nuevo.'
+        )
+      } else {
+        setError('Error inesperado al iniciar sesión')
+      }
     } finally {
       console.log('🏁 Finalizando login, loading = false')
       setLoading(false)
@@ -131,6 +169,24 @@ export default function LoginPage() {
                   Iniciar Sesión
                 </Button>
               </form>
+
+              <div className='mt-4 pt-4 border-t border-gray-200'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  className='w-full text-sm'
+                  onClick={() => {
+                    console.log('🧹 Usuario activó limpieza de emergencia')
+                    emergencySessionReset()
+                  }}
+                >
+                  <RefreshCw className='mr-2 h-4 w-4' />
+                  ¿Problemas para entrar? Limpiar sesión
+                </Button>
+                <p className='text-xs text-gray-500 mt-2 text-center'>
+                  Usa este botón si la página se queda cargando
+                </p>
+              </div>
             </CardContent>
           </Card>
 

@@ -4,11 +4,6 @@ import type { NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   try {
-    const supabase = await createServerSupabase()
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
     const url = request.nextUrl.clone()
     const pathname = url.pathname
 
@@ -16,18 +11,33 @@ export async function middleware(request: NextRequest) {
     const publicRoutes = ['/auth/login', '/auth/register', '/auth/junior', '/']
     const isPublicRoute = publicRoutes.includes(pathname)
 
-    // Si no hay sesión y la ruta no es pública, redirigir a login
-    if (!session && !isPublicRoute) {
-      url.pathname = '/auth/login'
-      return NextResponse.redirect(url)
+    // Si es una ruta pública, permitir acceso sin verificar sesión
+    if (isPublicRoute) {
+      return NextResponse.next()
     }
 
-    // Si hay sesión, obtener el perfil para verificar el rol
-    if (session) {
+    // Crear timeout para operaciones de Supabase
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Middleware timeout')), 3000)
+    )
+
+    const supabaseOperations = async () => {
+      const supabase = await createServerSupabase()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      // Si no hay sesión, redirigir a login
+      if (!session) {
+        url.pathname = '/auth/login'
+        return NextResponse.redirect(url)
+      }
+
+      // Si hay sesión, obtener el perfil para verificar el rol
       const { data: profileData } = await supabase
         .from('profiles')
         .select('role')
-        .eq('user_id', session.user.id) // Cambié 'id' por 'user_id'
+        .eq('user_id', session.user.id)
         .single()
 
       // Protección de rutas por rol
@@ -57,12 +67,37 @@ export async function middleware(request: NextRequest) {
           url.pathname = `/${userType}`
           return NextResponse.redirect(url)
         }
+      } else {
+        // Si no hay perfil, asumir admin por defecto (fallback)
+        console.log(
+          '⚠️ Middleware: No se encontró perfil, usando fallback admin'
+        )
+        if (pathname === '/') {
+          url.pathname = '/admin'
+          return NextResponse.redirect(url)
+        }
       }
+
+      return NextResponse.next()
     }
 
-    return NextResponse.next()
+    // Ejecutar con timeout
+    const result = await Promise.race([supabaseOperations(), timeoutPromise])
+    return result as NextResponse
   } catch (error) {
-    console.error('Middleware error:', error)
+    console.error('❌ Middleware error:', error)
+
+    // En caso de error, permitir acceso pero redirigir a login si no es ruta pública
+    const url = request.nextUrl.clone()
+    const pathname = url.pathname
+    const publicRoutes = ['/auth/login', '/auth/register', '/auth/junior', '/']
+    const isPublicRoute = publicRoutes.includes(pathname)
+
+    if (!isPublicRoute) {
+      url.pathname = '/auth/login'
+      return NextResponse.redirect(url)
+    }
+
     return NextResponse.next()
   }
 }

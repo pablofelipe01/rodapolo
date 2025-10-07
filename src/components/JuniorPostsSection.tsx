@@ -48,6 +48,7 @@ export function JuniorPostsSection() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [showPostModal, setShowPostModal] = useState(false)
   const [mediaFiles, setMediaFiles] = useState<Record<string, MediaFile[]>>({})
+  const [showAllPosts, setShowAllPosts] = useState(false)
 
   const fetchPosts = async () => {
     try {
@@ -150,7 +151,7 @@ export function JuniorPostsSection() {
         </CardHeader>
         <CardContent>
           <div className='space-y-4'>
-            {posts.slice(0, 3).map(post => (
+            {(showAllPosts ? posts : posts.slice(0, 3)).map(post => (
               <div
                 key={post.id}
                 className='flex items-center p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-orange-100 cursor-pointer hover:shadow-md transition-all duration-200'
@@ -216,13 +217,26 @@ export function JuniorPostsSection() {
               </div>
             ))}
 
-            {posts.length > 3 && (
+            {posts.length > 3 && !showAllPosts && (
               <div className='text-center pt-2'>
                 <Button
                   variant='outline'
                   className='bg-gradient-to-r from-purple-100 to-pink-100 border-purple-200 text-purple-700 hover:from-purple-200 hover:to-pink-200'
+                  onClick={() => setShowAllPosts(true)}
                 >
                   Ver más contenido ({posts.length - 3} más) 🎉
+                </Button>
+              </div>
+            )}
+
+            {showAllPosts && posts.length > 3 && (
+              <div className='text-center pt-2'>
+                <Button
+                  variant='outline'
+                  className='bg-gradient-to-r from-gray-100 to-gray-200 border-gray-300 text-gray-600 hover:from-gray-200 hover:to-gray-300'
+                  onClick={() => setShowAllPosts(false)}
+                >
+                  Ver menos contenido 📝
                 </Button>
               </div>
             )}
