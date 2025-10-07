@@ -12,7 +12,7 @@ const supabaseAdmin = createClient(
 export async function POST(request: NextRequest) {
   // Log para verificar que el webhook está recibiendo requests
   console.log('🔄 Webhook request received at:', new Date().toISOString())
-  
+
   const body = await request.text()
   const headersList = await headers()
   const signature = headersList.get('stripe-signature')
