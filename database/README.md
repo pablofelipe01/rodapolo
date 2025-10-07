@@ -1,6 +1,6 @@
 # Base de Datos Rodapolo - Schema y Documentación
 
-## Resumen
+## Resumen 8
 
 Este documento describe el esquema completo de la base de datos para el Sistema Rodapolo, una plataforma para gestionar clases de polo con monociclos eléctricos dirigida principalmente a menores de edad.
 
