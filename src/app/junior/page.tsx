@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Calendar,
   Clock,
@@ -20,10 +21,12 @@ import {
   Star,
   BookOpen,
   Target,
+  Award,
 } from 'lucide-react'
 import { createClientSupabase } from '@/lib/supabase'
 import { useJuniorAuth } from '@/providers/JuniorAuthProvider'
 import { JuniorPostsSection } from '@/components/JuniorPostsSection'
+import RankingTable from '@/components/ranking/RankingTable'
 
 interface BookingWithClass {
   id: string
@@ -238,234 +241,274 @@ export default function JuniorDashboard() {
         </Badge>
       </div>
 
-      {/* Tarjetas de información personal */}
-      <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-8'>
-        {/* Tarjeta de perfil */}
-        <Card className='bg-white/90 backdrop-blur-sm border-0 shadow-xl'>
-          <CardHeader className='text-center pb-3'>
-            <CardTitle className='flex items-center justify-center gap-2 text-lg'>
-              <User className='h-5 w-5 text-purple-600' />
-              Mi Perfil
-            </CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-3 text-center'>
-            <div>
-              <p className='text-sm text-gray-500'>Mi Código</p>
-              <p className='font-mono text-xl font-bold text-purple-600'>
-                {juniorProfile?.unique_code}
-              </p>
-            </div>
-            {getAge() && (
-              <div>
-                <p className='text-sm text-gray-500'>Edad</p>
-                <p className='text-lg font-semibold'>{getAge()} años 🎂</p>
-              </div>
-            )}
-            <div>
-              <p className='text-sm text-gray-500'>Handicap</p>
-              <div className='flex items-center justify-center gap-1'>
-                <Target className='h-4 w-4 text-green-600' />
-                <span className='text-lg font-semibold'>
-                  {juniorProfile?.handicap}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Navegación por tabs */}
+      <Tabs defaultValue='dashboard' className='w-full'>
+        <TabsList className='grid w-full grid-cols-3 mb-6 bg-white/90 backdrop-blur-sm'>
+          <TabsTrigger
+            value='dashboard'
+            className='flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white'
+          >
+            <User className='h-4 w-4' />
+            Mi Dashboard
+          </TabsTrigger>
+          <TabsTrigger
+            value='content'
+            className='flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white'
+          >
+            <BookOpen className='h-4 w-4' />
+            Contenido
+          </TabsTrigger>
+          <TabsTrigger
+            value='ranking'
+            className='flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500 data-[state=active]:to-orange-500 data-[state=active]:text-white'
+          >
+            <Award className='h-4 w-4' />
+            Ranking
+          </TabsTrigger>
+        </TabsList>
 
-        {/* Tarjeta de estadísticas */}
-        <Card className='bg-white/90 backdrop-blur-sm border-0 shadow-xl'>
-          <CardHeader className='text-center pb-3'>
-            <CardTitle className='flex items-center justify-center gap-2 text-lg'>
-              <Trophy className='h-5 w-5 text-yellow-600' />
-              Mis Stats
-            </CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-3'>
-            <div className='flex items-center justify-between'>
-              <span className='text-sm text-gray-600'>Clases tomadas</span>
-              <Badge variant='secondary' className='bg-blue-100 text-blue-800'>
-                12 📚
-              </Badge>
-            </div>
-            <div className='flex items-center justify-between'>
-              <span className='text-sm text-gray-600'>
-                Logros desbloqueados
-              </span>
-              <Badge
-                variant='secondary'
-                className='bg-yellow-100 text-yellow-800'
-              >
-                5 🏆
-              </Badge>
-            </div>
-            <div className='flex items-center justify-between'>
-              <span className='text-sm text-gray-600'>Racha actual</span>
-              <Badge
-                variant='secondary'
-                className='bg-green-100 text-green-800'
-              >
-                3 días 🔥
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Tarjeta de motivación */}
-        <Card className='bg-gradient-to-br from-purple-500 to-pink-500 text-white border-0 shadow-xl'>
-          <CardHeader className='text-center pb-3'>
-            <CardTitle className='flex items-center justify-center gap-2 text-lg'>
-              <Star className='h-5 w-5' />
-              ¡Sigue así!
-            </CardTitle>
-          </CardHeader>
-          <CardContent className='text-center space-y-3'>
-            <div className='text-4xl mb-2'>🌟</div>
-            <p className='text-sm opacity-90'>
-              ¡Estás haciendo un trabajo increíble!
-            </p>
-            <p className='text-xs opacity-75'>
-              Cada práctica te acerca más a tus metas
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Próximas clases */}
-      <Card className='bg-white/90 backdrop-blur-sm border-0 shadow-xl'>
-        <CardHeader>
-          <CardTitle className='flex items-center gap-2 text-xl'>
-            <Calendar className='h-6 w-6 text-blue-600' />
-            Mis Próximas Clases
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className='flex justify-center py-8'>
-              <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600'></div>
-            </div>
-          ) : upcomingBookings.length === 0 ? (
-            <div className='text-center py-8'>
-              <BookOpen className='mx-auto h-12 w-12 text-gray-400 mb-4' />
-              <h3 className='text-lg font-medium text-gray-900 mb-2'>
-                No tienes clases reservadas
-              </h3>
-              <p className='text-gray-500'>
-                ¡Pídele a tus padres que reserven clases para ti!
-              </p>
-            </div>
-          ) : (
-            <div className='space-y-4'>
-              {upcomingBookings.map(booking => (
-                <div
-                  key={booking.id}
-                  className='flex items-center p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100'
-                >
-                  <div className='flex-shrink-0 mr-4'>
-                    <div className='w-12 h-12 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center'>
-                      <Calendar className='h-6 w-6 text-white' />
-                    </div>
+        {/* Dashboard Tab */}
+        <TabsContent value='dashboard' className='space-y-6'>
+          {/* Tarjetas de información personal */}
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-8'>
+            {/* Tarjeta de perfil */}
+            <Card className='bg-white/90 backdrop-blur-sm border-0 shadow-xl'>
+              <CardHeader className='text-center pb-3'>
+                <CardTitle className='flex items-center justify-center gap-2 text-lg'>
+                  <User className='h-5 w-5 text-purple-600' />
+                  Mi Perfil
+                </CardTitle>
+              </CardHeader>
+              <CardContent className='space-y-3 text-center'>
+                <div>
+                  <p className='text-sm text-gray-500'>Mi Código</p>
+                  <p className='font-mono text-xl font-bold text-purple-600'>
+                    {juniorProfile?.unique_code}
+                  </p>
+                </div>
+                {getAge() && (
+                  <div>
+                    <p className='text-sm text-gray-500'>Edad</p>
+                    <p className='text-lg font-semibold'>{getAge()} años 🎂</p>
                   </div>
-                  <div className='flex-1'>
-                    <div className='flex items-center gap-2 mb-1'>
-                      <h3 className='font-semibold text-gray-900'>
-                        Clase con {booking.classes.instructor_name}
-                      </h3>
-                      <Badge
-                        variant={
-                          booking.classes.level === 'mixed'
-                            ? 'outline'
-                            : 'default'
-                        }
-                        className='text-xs'
-                      >
-                        {booking.classes.level === 'mixed'
-                          ? 'MIXTO'
-                          : booking.classes.level.toUpperCase()}
-                      </Badge>
-                      <Badge
-                        variant='secondary'
-                        className={`text-xs ${
-                          booking.status === 'confirmed'
-                            ? 'bg-green-100 text-green-800'
-                            : booking.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {booking.status === 'confirmed' && '✓ Confirmada'}
-                        {booking.status === 'pending' && '⏳ Pendiente'}
-                        {booking.status === 'cancelled' && '✗ Cancelada'}
-                      </Badge>
-                    </div>
-                    <div className='flex items-center gap-4 text-sm text-gray-600'>
-                      <div className='flex items-center gap-1'>
-                        <Calendar className='w-3 h-3' />
-                        {formatDate(booking.classes.date)}
-                      </div>
-                      <div className='flex items-center gap-1'>
-                        <Clock className='w-3 h-3' />
-                        {formatTime(booking.classes.start_time)} -{' '}
-                        {formatTime(booking.classes.end_time)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className='flex-shrink-0'>
-                    <Button
-                      size='sm'
-                      className='bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
-                      onClick={() => {
-                        setSelectedClass(booking)
-                        setShowDetailsModal(true)
-                      }}
-                    >
-                      Ver detalles
-                    </Button>
+                )}
+                <div>
+                  <p className='text-sm text-gray-500'>Handicap</p>
+                  <div className='flex items-center justify-center gap-1'>
+                    <Target className='h-4 w-4 text-green-600' />
+                    <span className='text-lg font-semibold'>
+                      {juniorProfile?.handicap}
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </CardContent>
+            </Card>
 
-      {/* Sección de contenido educativo */}
-      <JuniorPostsSection />
+            {/* Tarjeta de estadísticas */}
+            <Card className='bg-white/90 backdrop-blur-sm border-0 shadow-xl'>
+              <CardHeader className='text-center pb-3'>
+                <CardTitle className='flex items-center justify-center gap-2 text-lg'>
+                  <Trophy className='h-5 w-5 text-yellow-600' />
+                  Mis Stats
+                </CardTitle>
+              </CardHeader>
+              <CardContent className='space-y-3'>
+                <div className='flex items-center justify-between'>
+                  <span className='text-sm text-gray-600'>Clases tomadas</span>
+                  <Badge
+                    variant='secondary'
+                    className='bg-blue-100 text-blue-800'
+                  >
+                    12 📚
+                  </Badge>
+                </div>
+                <div className='flex items-center justify-between'>
+                  <span className='text-sm text-gray-600'>
+                    Logros desbloqueados
+                  </span>
+                  <Badge
+                    variant='secondary'
+                    className='bg-yellow-100 text-yellow-800'
+                  >
+                    5 🏆
+                  </Badge>
+                </div>
+                <div className='flex items-center justify-between'>
+                  <span className='text-sm text-gray-600'>Racha actual</span>
+                  <Badge
+                    variant='secondary'
+                    className='bg-green-100 text-green-800'
+                  >
+                    3 días 🔥
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
 
-      {/* Botones de acción rápida */}
-      <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-        <Button
-          className='h-20 bg-white/90 hover:bg-white text-gray-700 hover:text-purple-600 border-0 shadow-lg flex-col gap-2'
-          variant='outline'
-        >
-          <Calendar className='h-6 w-6' />
-          <span className='text-sm font-medium'>Mis Clases</span>
-        </Button>
+            {/* Tarjeta de motivación */}
+            <Card className='bg-gradient-to-br from-purple-500 to-pink-500 text-white border-0 shadow-xl'>
+              <CardHeader className='text-center pb-3'>
+                <CardTitle className='flex items-center justify-center gap-2 text-lg'>
+                  <Star className='h-5 w-5' />
+                  ¡Sigue así!
+                </CardTitle>
+              </CardHeader>
+              <CardContent className='text-center space-y-3'>
+                <div className='text-4xl mb-2'>🌟</div>
+                <p className='text-sm opacity-90'>
+                  ¡Estás haciendo un trabajo increíble!
+                </p>
+                <p className='text-xs opacity-75'>
+                  Cada práctica te acerca más a tus metas
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
-        <Button
-          className='h-20 bg-white/90 hover:bg-white text-gray-700 hover:text-yellow-600 border-0 shadow-lg flex-col gap-2'
-          variant='outline'
-        >
-          <Trophy className='h-6 w-6' />
-          <span className='text-sm font-medium'>Logros</span>
-        </Button>
+          {/* Próximas clases */}
+          <Card className='bg-white/90 backdrop-blur-sm border-0 shadow-xl'>
+            <CardHeader>
+              <CardTitle className='flex items-center gap-2 text-xl'>
+                <Calendar className='h-6 w-6 text-blue-600' />
+                Mis Próximas Clases
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className='flex justify-center py-8'>
+                  <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600'></div>
+                </div>
+              ) : upcomingBookings.length === 0 ? (
+                <div className='text-center py-8'>
+                  <BookOpen className='mx-auto h-12 w-12 text-gray-400 mb-4' />
+                  <h3 className='text-lg font-medium text-gray-900 mb-2'>
+                    No tienes clases reservadas
+                  </h3>
+                  <p className='text-gray-500'>
+                    ¡Pídele a tus padres que reserven clases para ti!
+                  </p>
+                </div>
+              ) : (
+                <div className='space-y-4'>
+                  {upcomingBookings.map(booking => (
+                    <div
+                      key={booking.id}
+                      className='flex items-center p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100'
+                    >
+                      <div className='flex-shrink-0 mr-4'>
+                        <div className='w-12 h-12 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center'>
+                          <Calendar className='h-6 w-6 text-white' />
+                        </div>
+                      </div>
+                      <div className='flex-1'>
+                        <div className='flex items-center gap-2 mb-1'>
+                          <h3 className='font-semibold text-gray-900'>
+                            Clase con {booking.classes.instructor_name}
+                          </h3>
+                          <Badge
+                            variant={
+                              booking.classes.level === 'mixed'
+                                ? 'outline'
+                                : 'default'
+                            }
+                            className='text-xs'
+                          >
+                            {booking.classes.level === 'mixed'
+                              ? 'MIXTO'
+                              : booking.classes.level.toUpperCase()}
+                          </Badge>
+                          <Badge
+                            variant='secondary'
+                            className={`text-xs ${
+                              booking.status === 'confirmed'
+                                ? 'bg-green-100 text-green-800'
+                                : booking.status === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {booking.status === 'confirmed' && '✓ Confirmada'}
+                            {booking.status === 'pending' && '⏳ Pendiente'}
+                            {booking.status === 'cancelled' && '✗ Cancelada'}
+                          </Badge>
+                        </div>
+                        <div className='flex items-center gap-4 text-sm text-gray-600'>
+                          <div className='flex items-center gap-1'>
+                            <Calendar className='w-3 h-3' />
+                            {formatDate(booking.classes.date)}
+                          </div>
+                          <div className='flex items-center gap-1'>
+                            <Clock className='w-3 h-3' />
+                            {formatTime(booking.classes.start_time)} -{' '}
+                            {formatTime(booking.classes.end_time)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className='flex-shrink-0'>
+                        <Button
+                          size='sm'
+                          className='bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
+                          onClick={() => {
+                            setSelectedClass(booking)
+                            setShowDetailsModal(true)
+                          }}
+                        >
+                          Ver detalles
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-        <Button
-          className='h-20 bg-white/90 hover:bg-white text-gray-700 hover:text-green-600 border-0 shadow-lg flex-col gap-2'
-          variant='outline'
-        >
-          <Star className='h-6 w-6' />
-          <span className='text-sm font-medium'>Progreso</span>
-        </Button>
+          {/* Botones de acción rápida */}
+          <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+            <Button
+              className='h-20 bg-white/90 hover:bg-white text-gray-700 hover:text-purple-600 border-0 shadow-lg flex-col gap-2'
+              variant='outline'
+            >
+              <Calendar className='h-6 w-6' />
+              <span className='text-sm font-medium'>Mis Clases</span>
+            </Button>
 
-        <Button
-          className='h-20 bg-white/90 hover:bg-white text-gray-700 hover:text-blue-600 border-0 shadow-lg flex-col gap-2'
-          variant='outline'
-        >
-          <User className='h-6 w-6' />
-          <span className='text-sm font-medium'>Mi Perfil</span>
-        </Button>
-      </div>
+            <Button
+              className='h-20 bg-white/90 hover:bg-white text-gray-700 hover:text-yellow-600 border-0 shadow-lg flex-col gap-2'
+              variant='outline'
+            >
+              <Trophy className='h-6 w-6' />
+              <span className='text-sm font-medium'>Logros</span>
+            </Button>
+
+            <Button
+              className='h-20 bg-white/90 hover:bg-white text-gray-700 hover:text-green-600 border-0 shadow-lg flex-col gap-2'
+              variant='outline'
+            >
+              <Star className='h-6 w-6' />
+              <span className='text-sm font-medium'>Progreso</span>
+            </Button>
+
+            <Button
+              className='h-20 bg-white/90 hover:bg-white text-gray-700 hover:text-blue-600 border-0 shadow-lg flex-col gap-2'
+              variant='outline'
+            >
+              <User className='h-6 w-6' />
+              <span className='text-sm font-medium'>Mi Perfil</span>
+            </Button>
+          </div>
+        </TabsContent>
+
+        {/* Contenido Tab */}
+        <TabsContent value='content' className='space-y-6'>
+          <JuniorPostsSection />
+        </TabsContent>
+
+        {/* Ranking Tab */}
+        <TabsContent value='ranking' className='space-y-6'>
+          <RankingTable />
+        </TabsContent>
+      </Tabs>
 
       {/* Modal de detalles de clase */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>

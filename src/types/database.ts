@@ -398,6 +398,50 @@ export interface Database {
           viewed_at?: string
         }
       }
+      player_ranking: {
+        Row: {
+          id: string
+          player_name: string
+          country: string
+          stars_juego: number
+          stars_rueda: number
+          tournaments_played: number
+          tournaments_won: number
+          ranking_points: number
+          general_ranking_position: number
+          avatar_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          player_name: string
+          country: string
+          stars_juego?: number
+          stars_rueda?: number
+          tournaments_played?: number
+          tournaments_won?: number
+          ranking_points?: number
+          general_ranking_position?: number
+          avatar_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          player_name?: string
+          country?: string
+          stars_juego?: number
+          stars_rueda?: number
+          tournaments_played?: number
+          tournaments_won?: number
+          ranking_points?: number
+          general_ranking_position?: number
+          avatar_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       class_details: {
@@ -532,6 +576,8 @@ export type Booking = Database['public']['Tables']['bookings']['Row']
 export type Post = Database['public']['Tables']['posts']['Row']
 export type PostLike = Database['public']['Tables']['post_likes']['Row']
 export type PostView = Database['public']['Tables']['post_views']['Row']
+export type PlayerRanking =
+  Database['public']['Tables']['player_ranking']['Row']
 
 // Tipos para inserts
 export type ProfileInsert = Database['public']['Tables']['profiles']['Insert']
@@ -550,6 +596,8 @@ export type PostLikeInsert =
   Database['public']['Tables']['post_likes']['Insert']
 export type PostViewInsert =
   Database['public']['Tables']['post_views']['Insert']
+export type PlayerRankingInsert =
+  Database['public']['Tables']['player_ranking']['Insert']
 
 // Tipos para updates
 export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
@@ -564,6 +612,8 @@ export type TicketUnitUpdate =
 export type ClassUpdate = Database['public']['Tables']['classes']['Update']
 export type BookingUpdate = Database['public']['Tables']['bookings']['Update']
 export type PostUpdate = Database['public']['Tables']['posts']['Update']
+export type PlayerRankingUpdate =
+  Database['public']['Tables']['player_ranking']['Update']
 
 // Tipos de vistas
 export type ClassDetails = Database['public']['Views']['class_details']['Row']
