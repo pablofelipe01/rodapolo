@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ClassInfo, JuniorProfile } from './types'
-import { MapPin, Ticket, CheckCircle2 } from 'lucide-react'
+import { MapPin, Ticket, CheckCircle2, Info, Calendar, Clock, Users, User } from 'lucide-react'
 
 interface BookingModalProps {
   open: boolean
@@ -36,9 +36,9 @@ export function BookingModal({
 }: BookingModalProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES', {
-      weekday: 'short',
+      weekday: 'long',
       year: 'numeric',
-      month: 'short',
+      month: 'long',
       day: 'numeric',
     })
   }
@@ -87,14 +87,10 @@ export function BookingModal({
 
         {selectedClass && (
           <div className='space-y-4 max-h-[70vh] overflow-y-auto'>
-            <div className='p-3 sm:p-4 bg-gray-50 rounded-lg'>
-              <h3 className='font-medium text-base sm:text-lg'>{selectedClass.instructor_name}</h3>
-              <div className='flex flex-wrap items-center gap-2 mt-2 text-xs sm:text-sm text-gray-600'>
-                <span>{formatDate(selectedClass.date)}</span>
-                <span>
-                  {formatTime(selectedClass.start_time)} -{' '}
-                  {formatTime(selectedClass.end_time)}
-                </span>
+            {/* Class Information */}
+            <div className='p-4 bg-gray-50 rounded-lg space-y-3'>
+              <div className='flex items-center gap-2'>
+                <h3 className='font-medium text-base sm:text-lg'>{selectedClass.instructor_name}</h3>
                 <Badge
                   variant={selectedClass.level === 'mixed' ? 'outline' : 'default'}
                   className='text-xs'
@@ -103,14 +99,63 @@ export function BookingModal({
                     ? 'MIXTO'
                     : selectedClass.level.toUpperCase()}
                 </Badge>
-                <Badge 
-                  variant='outline' 
-                  className={`text-xs ${getLocationColor(selectedClass.field)}`}
-                >
-                  <MapPin className='h-3 w-3 mr-1' />
-                  {getLocationDisplayName(selectedClass.field)}
-                </Badge>
               </div>
+              
+              {/* Date and Time */}
+              <div className='flex flex-wrap items-center gap-4 text-sm text-gray-600'>
+                <div className='flex items-center gap-1'>
+                  <Calendar className='h-4 w-4' />
+                  <span>{formatDate(selectedClass.date)}</span>
+                </div>
+                <div className='flex items-center gap-1'>
+                  <Clock className='h-4 w-4' />
+                  <span>
+                    {formatTime(selectedClass.start_time)} -{' '}
+                    {formatTime(selectedClass.end_time)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Location and Capacity */}
+              <div className='flex flex-wrap items-center gap-4 text-sm text-gray-600'>
+                {selectedClass.field && (
+                  <div className='flex items-center gap-1'>
+                    <MapPin className='h-4 w-4' />
+                    <Badge 
+                      variant='outline' 
+                      className={`text-xs ${getLocationColor(selectedClass.field)}`}
+                    >
+                      {getLocationDisplayName(selectedClass.field)}
+                    </Badge>
+                  </div>
+                )}
+                <div className='flex items-center gap-1'>
+                  <Users className='h-4 w-4' />
+                  <span>
+                    {selectedClass.current_bookings || 0}/{selectedClass.capacity} plazas
+                  </span>
+                </div>
+              </div>
+
+              {/* Field Details */}
+              {selectedClass.field && selectedClass.field !== getLocationDisplayName(selectedClass.field) && (
+                <div className='text-sm text-gray-600'>
+                  <strong>Campo:</strong> {selectedClass.field}
+                </div>
+              )}
+
+              {/* Instructor Notes */}
+              {selectedClass.notes && (
+                <div className='mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg'>
+                  <h4 className='font-medium text-sm text-yellow-900 mb-1 flex items-center gap-1'>
+                    <Info className='h-4 w-4' />
+                    Notas del Instructor
+                  </h4>
+                  <p className='text-sm text-yellow-800 whitespace-pre-wrap'>
+                    {selectedClass.notes}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Ticket Usage Info */}
@@ -123,8 +168,10 @@ export function BookingModal({
               </div>
             </div>
 
+            {/* Children Selection */}
             <div className='space-y-3'>
-              <label className='text-sm font-medium'>
+              <label className='text-sm font-medium flex items-center gap-2'>
+                <User className='h-4 w-4' />
                 Seleccionar hijo(s):
               </label>
               <div className='space-y-2 max-h-48 overflow-y-auto'>
@@ -166,6 +213,11 @@ export function BookingModal({
                             <Badge variant='outline' className='text-xs flex-shrink-0'>
                               {child.level.toUpperCase()}
                             </Badge>
+                            {child.nickname && (
+                              <span className='text-xs text-gray-500 truncate'>
+                                ({child.nickname})
+                              </span>
+                            )}
                           </label>
                         </>
                       )}
@@ -180,6 +232,7 @@ export function BookingModal({
               )}
             </div>
 
+            {/* Action Buttons */}
             <div className='flex flex-col sm:flex-row justify-end gap-2 pt-4'>
               <Button
                 variant='outline'
