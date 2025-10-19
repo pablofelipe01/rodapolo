@@ -35,8 +35,11 @@ export type Booking = {
   instructor_name: string
   junior_name: string
   junior_nickname: string | null
-  junior_id?: string // Add junior_id to check existing bookings
-  class_id?: string // Add class_id to check existing bookings
+  junior_id?: string
+  class_id?: string
+  notes: string | null // Add this
+  field: string | null // Add this
+  level?: 'alpha' | 'beta' | 'mixed' // Optional, if you want to include level
 }
 
 export type NewChildForm = {

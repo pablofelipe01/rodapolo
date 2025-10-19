@@ -66,36 +66,27 @@ export function useParentalDashboard() {
     }
   }, [supabase])
 
-  const fetchBookings = useCallback(async () => {
-    if (!profile?.id) return
-    try {
-      // We need to get bookings with junior_id to check existing reservations
-      const { data, error } = await supabase
-        .from('bookings')
-        .select('*')
-        .eq('parental_id', profile.id)
-        .eq('status', 'confirmed')
-        .order('class_date', { ascending: true })
-
-      if (error) throw error
+const fetchBookings = useCallback(async () => {
+  if (!profile?.id) return
+  try {
+    // Use the simple_bookings_view that worked before
+    const { data, error } = await supabase
+      .from('simple_bookings_view')
+      .select('*')
+      .eq('parental_id', profile.id)
+      .order('class_date', { ascending: true })
+    
+    if (error) {
+      console.error('Error fetching bookings:', error)
+      setBookings([])
+    } else {
       setBookings(data || [])
-    } catch (err) {
-      console.error('Error fetching bookings:', err)
-      
-      // Fallback to simple_bookings_view if bookings table fails
-      try {
-        const { data, error } = await supabase
-          .from('simple_bookings_view')
-          .select('*')
-          .eq('parental_id', profile.id)
-          .order('class_date', { ascending: true })
-        if (error) throw error
-        setBookings(data || [])
-      } catch (fallbackErr) {
-        console.error('Error fetching bookings from fallback:', fallbackErr)
-      }
     }
-  }, [profile?.id, supabase])
+  } catch (err) {
+    console.error('Error fetching bookings:', err)
+    setBookings([])
+  }
+}, [profile?.id, supabase])
 
   const fetchAvailableTickets = useCallback(async () => {
     if (!profile?.id) return
