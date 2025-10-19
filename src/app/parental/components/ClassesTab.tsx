@@ -19,9 +19,9 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES', {
-      weekday: 'long',
+      weekday: 'short',
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric',
     })
   }
@@ -88,9 +88,9 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
 
       {/* Filters */}
       <Card>
-        <CardHeader>
+        <CardHeader className='pb-3'>
           <CardTitle className='text-lg'>Filtros</CardTitle>
-          <CardDescription>
+          <CardDescription className='text-sm'>
             Filtra por ubicación y nivel de clase
           </CardDescription>
         </CardHeader>
@@ -109,11 +109,11 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
                   variant={locationFilter === value ? 'default' : 'outline'}
                   size='sm'
                   onClick={() => setLocationFilter(value as LocationFilter)}
-                  className='flex items-center gap-2'
+                  className='flex items-center gap-1 text-xs px-3 py-2 h-auto'
                 >
-                  <MapPin className='h-4 w-4' />
-                  {label}
-                  <Badge variant='secondary' className='ml-1'>
+                  <MapPin className='h-3 w-3' />
+                  <span>{label}</span>
+                  <Badge variant='secondary' className='ml-1 text-xs'>
                     {count}
                   </Badge>
                 </Button>
@@ -136,10 +136,10 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
                   variant={levelFilter === value ? 'default' : 'outline'}
                   size='sm'
                   onClick={() => setLevelFilter(value as any)}
-                  className='flex items-center gap-2'
+                  className='flex items-center gap-1 text-xs px-3 py-2 h-auto'
                 >
                   {label}
-                  <Badge variant='secondary' className='ml-1'>
+                  <Badge variant='secondary' className='ml-1 text-xs'>
                     {count}
                   </Badge>
                 </Button>
@@ -189,63 +189,73 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
               {filteredClasses.map(classInfo => (
                 <div
                   key={classInfo.id}
-                  className='flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50'
+                  className='flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-gray-50 gap-3'
                 >
-                  <div className='flex items-center space-x-4'>
+                  <div className='flex items-start space-x-3 flex-1'>
                     <div className='flex-shrink-0'>
-                      <div className='w-12 h-12 bg-green-100 rounded-full flex items-center justify-center'>
-                        <BookOpen className='h-6 w-6 text-green-600' />
+                      <div className='w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full flex items-center justify-center'>
+                        <BookOpen className='h-5 w-5 sm:h-6 sm:w-6 text-green-600' />
                       </div>
                     </div>
-                    <div className='flex-1'>
-                      <div className='flex items-center gap-2 mb-2'>
-                        <h3 className='text-lg font-medium text-gray-900'>
+                    <div className='flex-1 min-w-0'>
+                      <div className='flex flex-wrap items-center gap-2 mb-2'>
+                        <h3 className='text-base sm:text-lg font-medium text-gray-900 truncate'>
                           {classInfo.instructor_name}
                         </h3>
-                        <Badge
-                          variant={
-                            classInfo.level === 'mixed'
-                              ? 'outline'
-                              : classInfo.level === 'alpha'
-                                ? 'default'
-                                : 'secondary'
-                          }
-                        >
-                          {classInfo.level === 'mixed'
-                            ? 'MIXTO'
-                            : classInfo.level.toUpperCase()}
-                        </Badge>
-                        <Badge 
-                          variant='outline' 
-                          className={getLocationColor(classInfo.field)}
-                        >
-                          <MapPin className='h-3 w-3 mr-1' />
-                          {getLocationDisplayName(classInfo.field)}
-                        </Badge>
+                        <div className='flex flex-wrap gap-1'>
+                          <Badge
+                            variant={
+                              classInfo.level === 'mixed'
+                                ? 'outline'
+                                : classInfo.level === 'alpha'
+                                  ? 'default'
+                                  : 'secondary'
+                            }
+                            className='text-xs'
+                          >
+                            {classInfo.level === 'mixed'
+                              ? 'MIXTO'
+                              : classInfo.level.toUpperCase()}
+                          </Badge>
+                          {classInfo.field && (
+                            <Badge 
+                              variant='outline' 
+                              className={`text-xs ${getLocationColor(classInfo.field)}`}
+                            >
+                              <MapPin className='h-3 w-3 mr-1' />
+                              {getLocationDisplayName(classInfo.field)}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                      <div className='flex items-center gap-4 text-sm text-gray-500'>
+                      <div className='flex flex-col xs:flex-row xs:items-center gap-2 xs:gap-4 text-sm text-gray-500'>
                         <div className='flex items-center gap-1'>
                           <Calendar className='w-3 h-3' />
-                          {formatDate(classInfo.date)}
+                          <span className='text-xs'>{formatDate(classInfo.date)}</span>
                         </div>
                         <div className='flex items-center gap-1'>
                           <Clock className='w-3 h-3' />
-                          {formatTime(classInfo.start_time)} -{' '}
-                          {formatTime(classInfo.end_time)}
+                          <span className='text-xs'>
+                            {formatTime(classInfo.start_time)} -{' '}
+                            {formatTime(classInfo.end_time)}
+                          </span>
                         </div>
                         <div className='flex items-center gap-1'>
                           <Users className='w-3 h-3' />
-                          {classInfo.current_bookings || 0}/{classInfo.capacity}
+                          <span className='text-xs'>
+                            {classInfo.current_bookings || 0}/{classInfo.capacity}
+                          </span>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div className='flex items-center gap-2'>
+                  <div className='flex justify-end sm:justify-start'>
                     <Button
                       variant='outline'
                       size='sm'
                       onClick={() => onBookClass(classInfo)}
                       disabled={children.length === 0}
+                      className='w-full sm:w-auto'
                     >
                       Reservar
                     </Button>

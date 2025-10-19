@@ -36,9 +36,9 @@ export function BookingModal({
 }: BookingModalProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES', {
-      weekday: 'long',
+      weekday: 'short',
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric',
     })
   }
@@ -77,19 +77,19 @@ export function BookingModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className='max-w-[95vw] sm:max-w-md mx-2 sm:mx-0'>
         <DialogHeader>
-          <DialogTitle>Reservar Clase</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className='text-lg sm:text-xl'>Reservar Clase</DialogTitle>
+          <DialogDescription className='text-sm'>
             Selecciona para cuál(es) de tus hijos quieres reservar esta clase
           </DialogDescription>
         </DialogHeader>
 
         {selectedClass && (
-          <div className='space-y-4'>
-            <div className='p-4 bg-gray-50 rounded-lg'>
-              <h3 className='font-medium'>{selectedClass.instructor_name}</h3>
-              <div className='flex items-center gap-4 mt-2 text-sm text-gray-600 flex-wrap'>
+          <div className='space-y-4 max-h-[70vh] overflow-y-auto'>
+            <div className='p-3 sm:p-4 bg-gray-50 rounded-lg'>
+              <h3 className='font-medium text-base sm:text-lg'>{selectedClass.instructor_name}</h3>
+              <div className='flex flex-wrap items-center gap-2 mt-2 text-xs sm:text-sm text-gray-600'>
                 <span>{formatDate(selectedClass.date)}</span>
                 <span>
                   {formatTime(selectedClass.start_time)} -{' '}
@@ -97,6 +97,7 @@ export function BookingModal({
                 </span>
                 <Badge
                   variant={selectedClass.level === 'mixed' ? 'outline' : 'default'}
+                  className='text-xs'
                 >
                   {selectedClass.level === 'mixed'
                     ? 'MIXTO'
@@ -104,7 +105,7 @@ export function BookingModal({
                 </Badge>
                 <Badge 
                   variant='outline' 
-                  className={getLocationColor(selectedClass.field)}
+                  className={`text-xs ${getLocationColor(selectedClass.field)}`}
                 >
                   <MapPin className='h-3 w-3 mr-1' />
                   {getLocationDisplayName(selectedClass.field)}
@@ -114,7 +115,7 @@ export function BookingModal({
 
             {/* Ticket Usage Info */}
             <div className='bg-blue-50 p-3 rounded-lg border border-blue-200'>
-              <div className='flex items-center gap-2 text-sm text-blue-800'>
+              <div className='flex items-center gap-2 text-xs sm:text-sm text-blue-800'>
                 <Ticket className='h-4 w-4' />
                 <span>
                   Esta reserva utilizará <strong>{selectedJuniors.length} ticket(s)</strong>
@@ -126,7 +127,7 @@ export function BookingModal({
               <label className='text-sm font-medium'>
                 Seleccionar hijo(s):
               </label>
-              <div className='space-y-3 max-h-48 overflow-y-auto'>
+              <div className='space-y-2 max-h-48 overflow-y-auto'>
                 {availableChildren.map(child => {
                   const alreadyBooked = selectedClass ? hasExistingBooking(child.id, selectedClass.id) : false
                   
@@ -140,11 +141,11 @@ export function BookingModal({
                       }`}
                     >
                       {alreadyBooked ? (
-                        <div className='flex items-center gap-3 text-green-700 flex-1'>
-                          <CheckCircle2 className='h-5 w-5 text-green-600' />
-                          <div className='flex items-center gap-2'>
-                            <span className='font-medium'>{child.full_name}</span>
-                            <Badge variant='outline' className='bg-green-100 text-green-800'>
+                        <div className='flex items-center gap-2 text-green-700 flex-1'>
+                          <CheckCircle2 className='h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0' />
+                          <div className='flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0'>
+                            <span className='font-medium text-sm truncate'>{child.full_name}</span>
+                            <Badge variant='outline' className='bg-green-100 text-green-800 text-xs'>
                               RESERVADO
                             </Badge>
                           </div>
@@ -159,10 +160,10 @@ export function BookingModal({
                           />
                           <label
                             htmlFor={`junior-${child.id}`}
-                            className='flex items-center gap-2 cursor-pointer flex-1'
+                            className='flex items-center gap-2 cursor-pointer flex-1 min-w-0'
                           >
-                            <span>{child.full_name}</span>
-                            <Badge variant='outline'>
+                            <span className='text-sm truncate'>{child.full_name}</span>
+                            <Badge variant='outline' className='text-xs flex-shrink-0'>
                               {child.level.toUpperCase()}
                             </Badge>
                           </label>
@@ -179,22 +180,24 @@ export function BookingModal({
               )}
             </div>
 
-            <div className='flex justify-end gap-2 pt-4'>
+            <div className='flex flex-col sm:flex-row justify-end gap-2 pt-4'>
               <Button
                 variant='outline'
                 onClick={() => onOpenChange(false)}
+                className='w-full sm:w-auto'
               >
                 Cancelar
               </Button>
               <Button
                 onClick={onConfirm}
                 disabled={selectedJuniors.length === 0 || loading}
+                className='w-full sm:w-auto'
               >
                 {loading
                   ? 'Reservando...'
                   : selectedJuniors.length === 1
-                    ? `Confirmar Reserva (1 ticket)`
-                    : `Confirmar ${selectedJuniors.length} Reservas (${selectedJuniors.length} tickets)`}
+                    ? `Reservar (1 ticket)`
+                    : `Reservar (${selectedJuniors.length} tickets)`}
               </Button>
             </div>
           </div>

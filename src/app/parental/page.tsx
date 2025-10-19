@@ -57,7 +57,7 @@ export default function ParentalDashboard() {
   }
 
   return (
-    <div className='space-y-6'>
+    <div className='space-y-6 px-2 sm:px-4 lg:px-0'>
       <DashboardHeader profile={profile} />
       
       <AlertMessages error={error} paymentStatus={paymentStatus} />
@@ -69,14 +69,38 @@ export default function ParentalDashboard() {
       />
 
       <Tabs defaultValue='children' className='w-full'>
-        <TabsList className='grid w-full grid-cols-4'>
-          <TabsTrigger value='children'>Mis Hijos</TabsTrigger>
-          <TabsTrigger value='classes'>Clases Disponibles</TabsTrigger>
-          <TabsTrigger value='bookings'>Mis Reservas</TabsTrigger>
-          <TabsTrigger value='posts'>Contenido</TabsTrigger>
+        <TabsList className='grid w-full grid-cols-4 gap-1 p-1 bg-muted/50'>
+          <TabsTrigger 
+            value='children' 
+            className='text-xs sm:text-sm px-1 sm:px-3 py-2 data-[state=active]:bg-background'
+          >
+            <span className='hidden xs:inline'>Mis Hijos</span>
+            <span className='xs:hidden'>Hijos</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value='classes' 
+            className='text-xs sm:text-sm px-1 sm:px-3 py-2 data-[state=active]:bg-background'
+          >
+            <span className='hidden xs:inline'>Clases</span>
+            <span className='xs:hidden'>Clases</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value='bookings' 
+            className='text-xs sm:text-sm px-1 sm:px-3 py-2 data-[state=active]:bg-background'
+          >
+            <span className='hidden xs:inline'>Reservas</span>
+            <span className='xs:hidden'>Reservas</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value='posts' 
+            className='text-xs sm:text-sm px-1 sm:px-3 py-2 data-[state=active]:bg-background'
+          >
+            <span className='hidden xs:inline'>Contenido</span>
+            <span className='xs:hidden'>Posts</span>
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value='children' className='space-y-4'>
+        <TabsContent value='children' className='space-y-4 mt-4'>
           <ChildrenTab
             children={children}
             loading={loading}
@@ -84,7 +108,7 @@ export default function ParentalDashboard() {
           />
         </TabsContent>
 
-        <TabsContent value='classes' className='space-y-4'>
+        <TabsContent value='classes' className='space-y-4 mt-4'>
           <ClassesTab
             classes={upcomingClasses}
             children={children}
@@ -92,11 +116,11 @@ export default function ParentalDashboard() {
           />
         </TabsContent>
 
-        <TabsContent value='bookings' className='space-y-4'>
+        <TabsContent value='bookings' className='space-y-4 mt-4'>
           <BookingsTab bookings={bookings} />
         </TabsContent>
 
-        <TabsContent value='posts' className='space-y-4'>
+        <TabsContent value='posts' className='space-y-4 mt-4'>
           <div className='flex justify-between items-center'>
             <h2 className='text-xl font-semibold'>Contenido Educativo</h2>
           </div>
