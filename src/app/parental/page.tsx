@@ -116,9 +116,9 @@ export default function ParentalDashboard() {
           />
         </TabsContent>
 
-<TabsContent value='bookings' className='space-y-4 mt-4'>
-  <BookingsTab bookings={bookings} classes={upcomingClasses} />
-</TabsContent>
+        <TabsContent value='bookings' className='space-y-4 mt-4'>
+          <BookingsTab bookings={bookings} classes={upcomingClasses} />
+        </TabsContent>
 
         <TabsContent value='posts' className='space-y-4 mt-4'>
           <div className='flex justify-between items-center'>

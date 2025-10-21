@@ -62,20 +62,14 @@ export async function middleware(request: NextRequest) {
           return NextResponse.redirect(url)
         }
 
-        // Redirigir desde la raíz al dashboard apropiado
-        if (pathname === '/' && session) {
-          url.pathname = `/${userType}`
-          return NextResponse.redirect(url)
-        }
+        // REMOVED: Automatic redirect from root to dashboard
+        // Users can now access / without being redirected
       } else {
         // Si no hay perfil, asumir admin por defecto (fallback)
         console.log(
           '⚠️ Middleware: No se encontró perfil, usando fallback admin'
         )
-        if (pathname === '/') {
-          url.pathname = '/admin'
-          return NextResponse.redirect(url)
-        }
+        // REMOVED: Automatic redirect from root
       }
 
       return NextResponse.next()
