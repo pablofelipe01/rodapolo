@@ -13,7 +13,7 @@ import { ClassForm } from './components/ClassForm'
 import { TimeFilter } from './components/TimeFilter'
 import { CityFilter } from './components/CityFilter'
 import { Button } from '@/components/ui/button'
-import { Plus, Calendar } from 'lucide-react'
+import { Plus, Calendar, Filter, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 export default function ClassesPage() {
@@ -28,6 +28,7 @@ export default function ClassesPage() {
   const [activeTab, setActiveTab] = useState<'individual' | 'season'>('individual')
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('upcoming')
   const [cityFilter, setCityFilter] = useState<CityFilterType>('all')
+  const [showFilters, setShowFilters] = useState(false)
 
   const supabase = createClientSupabase()
   const router = useRouter()
@@ -158,18 +159,21 @@ export default function ClassesPage() {
     }
   }, [classes])
 
-  if (loading) return <div>Cargando clases...</div>
+  if (loading) return <div className="flex justify-center items-center min-h-64 p-4">Cargando clases...</div>
 
   return (
-    <div className='space-y-6'>
-      <div className='flex justify-between items-center'>
-        <div>
-          <h1 className='text-3xl font-bold tracking-tight'>Gestión de Clases</h1>
-          <p className='text-muted-foreground'>
+    <div className='space-y-4 sm:space-y-6 px-2 sm:px-4 lg:px-0'>
+      {/* Header Section */}
+      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4'>
+        <div className='text-center sm:text-left'>
+          <h1 className='text-2xl sm:text-3xl font-bold tracking-tight'>Gestión de Clases</h1>
+          <p className='text-muted-foreground text-sm sm:text-base mt-1'>
             Administra horarios, cupos y programación de clases
           </p>
         </div>
-        <div className='flex items-center gap-4'>
+        
+        {/* Desktop Actions */}
+        <div className='hidden sm:flex items-center gap-3'>
           <TimeFilter 
             currentFilter={timeFilter} 
             onFilterChange={setTimeFilter} 
@@ -178,29 +182,80 @@ export default function ClassesPage() {
             currentFilter={cityFilter} 
             onFilterChange={setCityFilter} 
           />
-          <Button onClick={() => setShowForm(true)}>
+          <Button onClick={() => setShowForm(true)} className='whitespace-nowrap'>
             <Plus className='mr-2 h-4 w-4' />
             Nueva Clase
           </Button>
         </div>
+
+        {/* Mobile Actions */}
+        <div className='flex sm:hidden items-center gap-2 justify-between'>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => setShowFilters(!showFilters)}
+            className='flex items-center gap-2 flex-1'
+          >
+            <Filter className='h-4 w-4' />
+            Filtros
+            {showFilters ? <X className='h-4 w-4' /> : null}
+          </Button>
+          <Button 
+            onClick={() => setShowForm(true)} 
+            size='sm'
+            className='flex items-center gap-1 whitespace-nowrap flex-shrink-0'
+          >
+            <Plus className='h-4 w-4' />
+            <span className='hidden xs:inline'>Nueva</span>
+          </Button>
+        </div>
       </div>
+
+      {/* Mobile Filters */}
+      {showFilters && (
+        <div className='sm:hidden bg-muted/30 p-4 rounded-lg space-y-4'>
+          <div className='space-y-3'>
+            <h3 className='font-medium text-sm'>Filtro de Tiempo</h3>
+            <TimeFilter 
+              currentFilter={timeFilter} 
+              onFilterChange={setTimeFilter} 
+            />
+          </div>
+          <div className='space-y-3'>
+            <h3 className='font-medium text-sm'>Filtro de Ciudad</h3>
+            <CityFilter 
+              currentFilter={cityFilter} 
+              onFilterChange={setCityFilter} 
+            />
+          </div>
+        </div>
+      )}
 
       {/* Filter Stats */}
-      <div className='flex gap-4 text-sm text-muted-foreground flex-wrap'>
-        <span>Total: {getFilterStats.all} clases</span>
-        <span>Próximas: {getFilterStats.upcoming}</span>
-        <span>Pasadas: {getFilterStats.past}</span>
-        <span>Sotogrande: {getFilterStats.sotogrande}</span>
-        <span>Marbella: {getFilterStats.marbella}</span>
-        {getFilterStats.noCity > 0 && <span>Sin ciudad: {getFilterStats.noCity}</span>}
-        <span>Mostrando: {filteredClasses.length}</span>
+      <div className='flex flex-wrap gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground justify-center sm:justify-start'>
+        <span className='bg-muted px-2 py-1 rounded'>Total: {getFilterStats.all}</span>
+        <span className='bg-green-100 text-green-800 px-2 py-1 rounded'>Próximas: {getFilterStats.upcoming}</span>
+        <span className='bg-gray-100 text-gray-800 px-2 py-1 rounded'>Pasadas: {getFilterStats.past}</span>
+        <span className='bg-blue-100 text-blue-800 px-2 py-1 rounded'>Sotogrande: {getFilterStats.sotogrande}</span>
+        <span className='bg-green-100 text-green-800 px-2 py-1 rounded'>Marbella: {getFilterStats.marbella}</span>
+        {getFilterStats.noCity > 0 && (
+          <span className='bg-yellow-100 text-yellow-800 px-2 py-1 rounded'>Sin ciudad: {getFilterStats.noCity}</span>
+        )}
+        <span className='bg-primary/10 text-primary px-2 py-1 rounded font-medium'>
+          Mostrando: {filteredClasses.length}
+        </span>
       </div>
 
-      <ViewNavigation currentView={currentView} onViewChange={setCurrentView} />
+      {/* View Navigation */}
+      <div className='w-full'>
+        <ViewNavigation currentView={currentView} onViewChange={setCurrentView} />
+      </div>
 
+      {/* Alerts */}
       {error && <AlertMessage type="error" message={error} />}
       {success && <AlertMessage type="success" message={success} />}
 
+      {/* Class Form */}
       {showForm && (
         <ClassForm
           editingClass={editingClass}
@@ -212,71 +267,75 @@ export default function ClassesPage() {
         />
       )}
 
-      {currentView === 'list' && (
-        <ClassListView
-          classes={filteredClasses}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onViewDetails={handleViewDetails}
-        />
-      )}
+      {/* Views */}
+      <div className='w-full'>
+        {currentView === 'list' && (
+          <ClassListView
+            classes={filteredClasses}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onViewDetails={handleViewDetails}
+          />
+        )}
 
-      {currentView === 'day' && (
-        <DayView
-          classes={filteredClasses}
-          selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onViewDetails={handleViewDetails}
-        />
-      )}
+        {currentView === 'day' && (
+          <DayView
+            classes={filteredClasses}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onViewDetails={handleViewDetails}
+          />
+        )}
 
-      {currentView === 'week' && (
-        <WeekView
-          classes={filteredClasses}
-          selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onViewDetails={handleViewDetails}
-        />
-      )}
+        {currentView === 'week' && (
+          <WeekView
+            classes={filteredClasses}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onViewDetails={handleViewDetails}
+          />
+        )}
 
-      {currentView === 'month' && (
-        <MonthView
-          classes={filteredClasses}
-          selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onViewDetails={handleViewDetails}
-        />
-      )}
+        {currentView === 'month' && (
+          <MonthView
+            classes={filteredClasses}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onViewDetails={handleViewDetails}
+          />
+        )}
 
-      {filteredClasses.length === 0 && classes.length > 0 && (
-        <div className='text-center p-8 border rounded-lg'>
-          <Calendar className='mx-auto h-12 w-12 text-gray-400 mb-4' />
-          <h3 className='text-lg font-medium text-gray-900'>
-            No hay clases que coincidan con los filtros
-          </h3>
-          <p className='text-gray-500 mt-2'>
-            {timeFilter === 'upcoming' && cityFilter === 'all' 
-              ? 'No hay clases próximas programadas.' 
-              : `No hay clases que coincidan con los filtros: ${timeFilter === 'upcoming' ? 'Próximas' : timeFilter === 'past' ? 'Pasadas' : 'Todas'} y ${cityFilter === 'sotogrande' ? 'Sotogrande' : cityFilter === 'marbella' ? 'Marbella' : 'Todas las ciudades'}.`}
-          </p>
-          <Button 
-            variant='outline' 
-            className='mt-4'
-            onClick={() => {
-              setTimeFilter('all')
-              setCityFilter('all')
-            }}
-          >
-            Ver todas las clases
-          </Button>
-        </div>
-      )}
+        {filteredClasses.length === 0 && classes.length > 0 && (
+          <div className='text-center p-6 border rounded-lg bg-muted/20'>
+            <Calendar className='mx-auto h-12 w-12 text-gray-400 mb-4' />
+            <h3 className='text-lg font-medium text-gray-900 mb-2'>
+              No hay clases que coincidan con los filtros
+            </h3>
+            <p className='text-gray-500 text-sm mb-4'>
+              {timeFilter === 'upcoming' && cityFilter === 'all' 
+                ? 'No hay clases próximas programadas.' 
+                : `Filtros activos: ${timeFilter === 'upcoming' ? 'Próximas' : timeFilter === 'past' ? 'Pasadas' : 'Todas'} • ${cityFilter === 'sotogrande' ? 'Sotogrande' : cityFilter === 'marbella' ? 'Marbella' : 'Todas las ciudades'}`}
+            </p>
+            <Button 
+              variant='outline' 
+              size='sm'
+              onClick={() => {
+                setTimeFilter('all')
+                setCityFilter('all')
+                setShowFilters(false)
+              }}
+            >
+              Ver todas las clases
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

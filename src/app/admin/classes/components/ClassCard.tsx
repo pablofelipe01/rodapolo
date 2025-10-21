@@ -70,63 +70,75 @@ export function ClassCard({ classItem, onEdit, onDelete, onViewDetails }: ClassC
   return (
     <Card>
       <CardContent className='pt-6'>
-        <div className='flex items-center justify-between'>
-          <div className='flex-1'>
-            <div className='flex items-center gap-4 mb-2'>
-              <div className='flex items-center gap-2'>
-                <Calendar className='h-4 w-4 text-gray-500' />
-                <span className='font-medium'>{formatDateForDisplay(classItem.date)}</span>
+        <div className='flex flex-col gap-4'>
+          {/* Main Content */}
+          <div className='flex items-start justify-between'>
+            <div className='flex-1'>
+              <div className='flex items-center gap-4 mb-2'>
+                <div className='flex items-center gap-2'>
+                  <Calendar className='h-4 w-4 text-gray-500' />
+                  <span className='font-medium'>{formatDateForDisplay(classItem.date)}</span>
+                </div>
+                <div className='flex items-center gap-2'>
+                  <Clock className='h-4 w-4 text-gray-500' />
+                  <span>{classItem.start_time} - {classItem.end_time}</span>
+                </div>
               </div>
-              <div className='flex items-center gap-2'>
-                <Clock className='h-4 w-4 text-gray-500' />
-                <span>{classItem.start_time} - {classItem.end_time}</span>
-              </div>
-            </div>
 
-            <div className='flex items-center gap-4 mb-2'>
-              <div className='flex items-center gap-2'>
-                <Users className='h-4 w-4 text-gray-500' />
-                <span>{classItem.current_bookings}/{classItem.capacity} cupos</span>
+              <div className='flex items-center gap-4 mb-2'>
+                <div className='flex items-center gap-2'>
+                  <Users className='h-4 w-4 text-gray-500' />
+                  <span>{classItem.current_bookings}/{classItem.capacity} cupos</span>
+                </div>
+                <span className='text-gray-600'>Instructor: {classItem.instructor_name}</span>
+                {classItem.field && (
+                  <span className='text-gray-600'>Ciudad: {classItem.field === 'sotogrande' ? 'Sotogrande' : 'Marbella'}</span>
+                )}
               </div>
-              <span className='text-gray-600'>Instructor: {classItem.instructor_name}</span>
-              {classItem.field && (
-                <span className='text-gray-600'>Ciudad: {classItem.field === 'sotogrande' ? 'Sotogrande' : 'Marbella'}</span>
+
+              <div className='flex items-center gap-2'>
+                {getStatusBadge(classItem.status)}
+                {getLevelBadge(classItem.level)}
+                {getCityBadge(classItem.field)}
+              </div>
+
+              {/* Notes Section */}
+              {classItem.notes && (
+                <div className='mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg'>
+                  <p className='text-sm text-yellow-800'>{classItem.notes}</p>
+                </div>
               )}
             </div>
-
-            <div className='flex items-center gap-2'>
-              {getStatusBadge(classItem.status)}
-              {getLevelBadge(classItem.level)}
-              {getCityBadge(classItem.field)}
-            </div>
-
-            {classItem.notes && (
-              <p className='mt-2 text-sm text-gray-600'>{classItem.notes}</p>
-            )}
           </div>
 
-          <div className='flex items-center gap-2'>
+          {/* Action Buttons - Now below everything */}
+          <div className='flex justify-end gap-2 pt-3 border-t'>
             <Button
               variant='outline'
               size='sm'
               onClick={() => onEdit(classItem)}
+              className='flex items-center gap-2'
             >
               <Edit className='h-4 w-4' />
+              <span className='hidden sm:inline'>Editar</span>
             </Button>
             <Button
               variant='outline'
               size='sm'
               onClick={() => onDelete(classItem.id)}
+              className='flex items-center gap-2 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300'
             >
               <Trash2 className='h-4 w-4' />
+              <span className='hidden sm:inline'>Eliminar</span>
             </Button>
             <Button
-              variant='ghost'
-              size='icon'
+              variant='outline'
+              size='sm'
               onClick={() => onViewDetails(classItem)}
-              title='Ver detalles de la clase'
+              className='flex items-center gap-2'
             >
               <Eye className='h-4 w-4' />
+              <span className='hidden sm:inline'>Ver</span>
             </Button>
           </div>
         </div>
