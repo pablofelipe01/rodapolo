@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { BookOpen, Calendar, Clock, Users, MapPin, ChevronDown, ChevronUp, Info } from 'lucide-react'
+import { BookOpen, Calendar, Clock, Users, MapPin, ChevronDown, ChevronUp, Info, Filter } from 'lucide-react'
 import { ClassInfo, JuniorProfile } from './types'
 import { useState } from 'react'
 
@@ -17,6 +17,7 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all')
   const [levelFilter, setLevelFilter] = useState<'all' | 'alpha' | 'beta' | 'mixed'>('all')
   const [expandedClassId, setExpandedClassId] = useState<string | null>(null)
+  const [showFilters, setShowFilters] = useState(false)
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES', {
@@ -87,90 +88,153 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
 
   return (
     <div className='space-y-4'>
-      <div className='flex justify-between items-center'>
+      {/* Header with Mobile Filter Toggle */}
+      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3'>
         <h2 className='text-xl font-semibold'>Clases Disponibles</h2>
+        <Button
+          variant='outline'
+          size='sm'
+          onClick={() => setShowFilters(!showFilters)}
+          className='sm:hidden flex items-center gap-2 w-full sm:w-auto'
+        >
+          <Filter className='h-4 w-4' />
+          {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+          <Badge variant='secondary' className='ml-1'>
+            {filteredClasses.length}
+          </Badge>
+        </Button>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader className='pb-3'>
-          <CardTitle className='text-lg'>Filtros</CardTitle>
-          <CardDescription className='text-sm'>
-            Filtra por ubicación y nivel de clase
-          </CardDescription>
-        </CardHeader>
-        <CardContent className='space-y-4'>
-          {/* Location Filter */}
-          <div>
-            <label className='text-sm font-medium mb-2 block'>Ubicación</label>
-            <div className='flex flex-wrap gap-2'>
-              {[
-                { value: 'all', label: 'Todas', count: locationCounts.all },
-                { value: 'Sotogrande', label: 'Sotogrande', count: locationCounts.Sotogrande },
-                { value: 'Marbella', label: 'Marbella', count: locationCounts.Marbella },
-              ].map(({ value, label, count }) => (
-                <Button
-                  key={value}
-                  variant={locationFilter === value ? 'default' : 'outline'}
-                  size='sm'
-                  onClick={() => setLocationFilter(value as LocationFilter)}
-                  className='flex items-center gap-1 text-xs px-3 py-2 h-auto'
-                >
-                  <MapPin className='h-3 w-3' />
-                  <span>{label}</span>
-                  <Badge variant='secondary' className='ml-1 text-xs'>
-                    {count}
-                  </Badge>
-                </Button>
-              ))}
+      {/* Filters - Mobile Collapsible, Desktop Always Visible */}
+      <div className={`${showFilters ? 'block' : 'hidden'} sm:block`}>
+        <Card>
+          <CardHeader className='pb-3'>
+            <CardTitle className='text-lg flex items-center gap-2'>
+              <Filter className='h-5 w-5' />
+              Filtros
+            </CardTitle>
+            <CardDescription className='text-sm'>
+              Filtra por ubicación y nivel de clase
+            </CardDescription>
+          </CardHeader>
+          <CardContent className='space-y-4'>
+            {/* Location Filter */}
+            <div>
+              <label className='text-sm font-medium mb-2 block'>Ubicación</label>
+              <div className='flex flex-wrap gap-2'>
+                {[
+                  { value: 'all', label: 'Todas', count: locationCounts.all },
+                  { value: 'Sotogrande', label: 'Sotogrande', count: locationCounts.Sotogrande },
+                  { value: 'Marbella', label: 'Marbella', count: locationCounts.Marbella },
+                ].map(({ value, label, count }) => (
+                  <Button
+                    key={value}
+                    variant={locationFilter === value ? 'default' : 'outline'}
+                    size='sm'
+                    onClick={() => setLocationFilter(value as LocationFilter)}
+                    className='flex items-center gap-1 text-xs px-3 py-2 h-auto min-w-[100px] flex-1 sm:flex-initial'
+                  >
+                    <MapPin className='h-3 w-3 flex-shrink-0' />
+                    <span className='truncate'>{label}</span>
+                    <Badge variant='secondary' className='ml-1 text-xs flex-shrink-0'>
+                      {count}
+                    </Badge>
+                  </Button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Level Filter */}
-          <div>
-            <label className='text-sm font-medium mb-2 block'>Nivel</label>
-            <div className='flex flex-wrap gap-2'>
-              {[
-                { value: 'all', label: 'Todos', count: levelCounts.all },
-                { value: 'alpha', label: 'Alpha', count: levelCounts.alpha },
-                { value: 'beta', label: 'Beta', count: levelCounts.beta },
-                { value: 'mixed', label: 'Mixto', count: levelCounts.mixed },
-              ].map(({ value, label, count }) => (
-                <Button
-                  key={value}
-                  variant={levelFilter === value ? 'default' : 'outline'}
-                  size='sm'
-                  onClick={() => setLevelFilter(value as any)}
-                  className='flex items-center gap-1 text-xs px-3 py-2 h-auto'
-                >
-                  {label}
-                  <Badge variant='secondary' className='ml-1 text-xs'>
-                    {count}
-                  </Badge>
-                </Button>
-              ))}
+            {/* Level Filter */}
+            <div>
+              <label className='text-sm font-medium mb-2 block'>Nivel</label>
+              <div className='flex flex-wrap gap-2'>
+                {[
+                  { value: 'all', label: 'Todos', count: levelCounts.all },
+                  { value: 'alpha', label: 'Alpha', count: levelCounts.alpha },
+                  { value: 'beta', label: 'Beta', count: levelCounts.beta },
+                  { value: 'mixed', label: 'Mixto', count: levelCounts.mixed },
+                ].map(({ value, label, count }) => (
+                  <Button
+                    key={value}
+                    variant={levelFilter === value ? 'default' : 'outline'}
+                    size='sm'
+                    onClick={() => setLevelFilter(value as any)}
+                    className='flex items-center gap-1 text-xs px-3 py-2 h-auto min-w-[80px] flex-1 sm:flex-initial'
+                  >
+                    <span className='truncate'>{label}</span>
+                    <Badge variant='secondary' className='ml-1 text-xs flex-shrink-0'>
+                      {count}
+                    </Badge>
+                  </Button>
+                ))}
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
 
+            {/* Active Filters Summary */}
+            {(locationFilter !== 'all' || levelFilter !== 'all') && (
+              <div className='flex items-center justify-between pt-2 border-t'>
+                <span className='text-sm text-gray-600'>
+                  Filtros activos: 
+                  {locationFilter !== 'all' && ` ${locationFilter}`}
+                  {levelFilter !== 'all' && ` • ${levelFilter.toUpperCase()}`}
+                </span>
+                <Button 
+                  variant='ghost' 
+                  size='sm'
+                  onClick={() => {
+                    setLocationFilter('all')
+                    setLevelFilter('all')
+                  }}
+                  className='text-xs h-8'
+                >
+                  Limpiar
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Classes List */}
       <Card>
-        <CardHeader>
-          <CardTitle>Próximas Clases</CardTitle>
-          <CardDescription>
-            {filteredClasses.length} clase(s) encontrada(s)
-            {locationFilter !== 'all' && ` en ${locationFilter}`}
-            {levelFilter !== 'all' && ` - Nivel ${levelFilter.toUpperCase()}`}
-          </CardDescription>
+        <CardHeader className='pb-4'>
+          <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2'>
+            <div>
+              <CardTitle>Próximas Clases</CardTitle>
+              <CardDescription className='flex flex-wrap items-center gap-1'>
+                <span>{filteredClasses.length} clase(s) encontrada(s)</span>
+                {locationFilter !== 'all' && (
+                  <Badge variant='outline' className='text-xs'>
+                    📍 {locationFilter}
+                  </Badge>
+                )}
+                {levelFilter !== 'all' && (
+                  <Badge variant='outline' className='text-xs'>
+                    🎯 {levelFilter.toUpperCase()}
+                  </Badge>
+                )}
+              </CardDescription>
+            </div>
+            {/* Desktop Filter Toggle */}
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => setShowFilters(!showFilters)}
+              className='hidden sm:flex items-center gap-2'
+            >
+              <Filter className='h-4 w-4' />
+              {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className='px-2 sm:px-6'>
           {filteredClasses.length === 0 ? (
-            <div className='text-center py-8'>
-              <BookOpen className='mx-auto h-12 w-12 text-gray-400' />
-              <h3 className='mt-2 text-sm font-medium text-gray-900'>
+            <div className='text-center py-8 px-4'>
+              <BookOpen className='mx-auto h-12 w-12 text-gray-400 mb-4' />
+              <h3 className='text-lg font-medium text-gray-900 mb-2'>
                 No hay clases programadas
               </h3>
-              <p className='mt-1 text-sm text-gray-500'>
+              <p className='text-gray-500 mb-4 max-w-sm mx-auto'>
                 {classes.length === 0 
                   ? 'Las clases aparecerán aquí cuando estén disponibles.'
                   : 'No hay clases que coincidan con los filtros seleccionados.'
@@ -179,18 +243,17 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
               {(locationFilter !== 'all' || levelFilter !== 'all') && (
                 <Button 
                   variant='outline' 
-                  className='mt-4'
                   onClick={() => {
                     setLocationFilter('all')
                     setLevelFilter('all')
                   }}
                 >
-                  Limpiar filtros
+                  Ver todas las clases
                 </Button>
               )}
             </div>
           ) : (
-            <div className='space-y-4'>
+            <div className='space-y-3'>
               {filteredClasses.map(classInfo => {
                 const isExpanded = expandedClassId === classInfo.id
                 const hasNotes = classInfo.notes && classInfo.notes.trim().length > 0
@@ -199,22 +262,24 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
                 return (
                   <div
                     key={classInfo.id}
-                    className='border rounded-lg hover:bg-gray-50 transition-colors'
+                    className='border rounded-lg hover:border-gray-300 transition-all duration-200 bg-white shadow-sm hover:shadow-md'
                   >
                     {/* Class Header - Always Visible */}
-                    <div className='flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-3'>
-                      <div className='flex items-start space-x-3 flex-1'>
-                        <div className='flex-shrink-0'>
-                          <div className='w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full flex items-center justify-center'>
-                            <BookOpen className='h-5 w-5 sm:h-6 sm:w-6 text-green-600' />
+                    <div className='p-4'>
+                      <div className='flex flex-col gap-3'>
+                        {/* Top Row - Icon and Basic Info */}
+                        <div className='flex items-start gap-3'>
+                          <div className='flex-shrink-0'>
+                            <div className='w-10 h-10 bg-green-100 rounded-full flex items-center justify-center'>
+                              <BookOpen className='h-5 w-5 text-green-600' />
+                            </div>
                           </div>
-                        </div>
-                        <div className='flex-1 min-w-0'>
-                          <div className='flex flex-wrap items-center gap-2 mb-2'>
-                            <h3 className='text-base sm:text-lg font-medium text-gray-900 truncate'>
-                              {classInfo.instructor_name}
-                            </h3>
-                            <div className='flex flex-wrap gap-1'>
+                          <div className='flex-1 min-w-0'>
+                            {/* Instructor and Level */}
+                            <div className='flex flex-col xs:flex-row xs:items-start xs:justify-between gap-2 mb-2'>
+                              <h3 className='text-base font-semibold text-gray-900 truncate'>
+                                {classInfo.instructor_name}
+                              </h3>
                               <Badge
                                 variant={
                                   classInfo.level === 'mixed'
@@ -223,92 +288,101 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
                                       ? 'default'
                                       : 'secondary'
                                 }
-                                className='text-xs'
+                                className='text-xs w-fit'
                               >
                                 {classInfo.level === 'mixed'
                                   ? 'MIXTO'
                                   : classInfo.level.toUpperCase()}
                               </Badge>
+                            </div>
+
+                            {/* Location and Notes Badges */}
+                            <div className='flex flex-wrap gap-1 mb-3'>
                               {hasField && (
                                 <Badge 
                                   variant='outline' 
                                   className={`text-xs ${getLocationColor(classInfo.field)}`}
                                 >
-                                  <MapPin className='h-3 w-3 mr-1' />
-                                  {getLocationDisplayName(classInfo.field)}
+                                  <MapPin className='h-3 w-3 mr-1 flex-shrink-0' />
+                                  <span className='truncate'>{getLocationDisplayName(classInfo.field)}</span>
                                 </Badge>
                               )}
                               {hasNotes && (
                                 <Badge variant='outline' className='text-xs bg-yellow-100 text-yellow-800 border-yellow-200'>
-                                  <Info className='h-3 w-3 mr-1' />
+                                  <Info className='h-3 w-3 mr-1 flex-shrink-0' />
                                   Notas
                                 </Badge>
                               )}
                             </div>
-                          </div>
-                          <div className='flex flex-col xs:flex-row xs:items-center gap-2 xs:gap-4 text-sm text-gray-500'>
-                            <div className='flex items-center gap-1'>
-                              <Calendar className='w-3 h-3' />
-                              <span className='text-xs'>{formatDate(classInfo.date)}</span>
-                            </div>
-                            <div className='flex items-center gap-1'>
-                              <Clock className='w-3 h-3' />
-                              <span className='text-xs'>
-                                {formatTime(classInfo.start_time)} -{' '}
-                                {formatTime(classInfo.end_time)}
-                              </span>
-                            </div>
-                            <div className='flex items-center gap-1'>
-                              <Users className='w-3 h-3' />
-                              <span className='text-xs'>
-                                {classInfo.current_bookings || 0}/{classInfo.capacity}
-                              </span>
+
+                            {/* Date, Time, Capacity */}
+                            <div className='flex flex-col xs:flex-row xs:items-center gap-2 xs:gap-4 text-sm text-gray-600'>
+                              <div className='flex items-center gap-1.5'>
+                                <Calendar className='w-4 h-4 flex-shrink-0' />
+                                <span className='text-sm'>{formatDate(classInfo.date)}</span>
+                              </div>
+                              <div className='flex items-center gap-1.5'>
+                                <Clock className='w-4 h-4 flex-shrink-0' />
+                                <span className='text-sm'>
+                                  {formatTime(classInfo.start_time)} - {formatTime(classInfo.end_time)}
+                                </span>
+                              </div>
+                              <div className='flex items-center gap-1.5'>
+                                <Users className='w-4 h-4 flex-shrink-0' />
+                                <span className='text-sm'>
+                                  {classInfo.current_bookings || 0}/{classInfo.capacity}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                      
-                      <div className='flex items-center gap-2 self-end sm:self-auto'>
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          onClick={() => onBookClass(classInfo)}
-                          disabled={children.length === 0}
-                          className='w-full sm:w-auto'
-                        >
-                          Reservar
-                        </Button>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          onClick={() => toggleExpand(classInfo.id)}
-                          className='p-2 h-9 w-9'
-                        >
-                          {isExpanded ? (
-                            <ChevronUp className='h-4 w-4' />
-                          ) : (
-                            <ChevronDown className='h-4 w-4' />
-                          )}
-                        </Button>
+
+                        {/* Bottom Row - Actions */}
+                        <div className='flex items-center justify-between gap-2 pt-2 border-t'>
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            onClick={() => onBookClass(classInfo)}
+                            disabled={children.length === 0}
+                            className='flex-1 sm:flex-initial'
+                          >
+                            {children.length === 0 ? 'Agregar Hijo Primero' : 'Reservar'}
+                          </Button>
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            onClick={() => toggleExpand(classInfo.id)}
+                            className='p-2 h-9 w-9 flex-shrink-0'
+                          >
+                            {isExpanded ? (
+                              <ChevronUp className='h-4 w-4' />
+                            ) : (
+                              <ChevronDown className='h-4 w-4' />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     </div>
 
                     {/* Expandable Details */}
                     {isExpanded && (
-                      <div className='px-4 pb-4 border-t pt-4 bg-white rounded-b-lg'>
-                        <div className='space-y-3'>
+                      <div className='px-4 pb-4 border-t bg-gray-50/50'>
+                        <div className='space-y-4 pt-4'>
                           {/* Field Information */}
                           {hasField && (
                             <div>
-                              <h4 className='font-medium text-sm text-gray-900 mb-1'>Ubicación</h4>
-                              <p className='text-sm text-gray-600'>{classInfo.field}</p>
+                              <h4 className='font-medium text-sm text-gray-900 mb-2 flex items-center gap-2'>
+                                <MapPin className='h-4 w-4 text-blue-600' />
+                                Ubicación
+                              </h4>
+                              <p className='text-sm text-gray-600 pl-6'>{classInfo.field}</p>
                             </div>
                           )}
 
                           {/* Notes Section */}
                           {hasNotes && (
                             <div>
-                              <h4 className='font-medium text-sm text-gray-900 mb-1 flex items-center gap-1'>
+                              <h4 className='font-medium text-sm text-gray-900 mb-2 flex items-center gap-2'>
                                 <Info className='h-4 w-4 text-yellow-600' />
                                 Notas del Instructor
                               </h4>
@@ -322,19 +396,34 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
 
                           {/* Class Details */}
                           <div className='grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm'>
-                            <div>
-                              <h4 className='font-medium text-gray-900 mb-1'>Información de la Clase</h4>
-                              <div className='space-y-1 text-gray-600'>
-                                <p><strong>Instructor:</strong> {classInfo.instructor_name}</p>
-                                <p><strong>Nivel:</strong> {classInfo.level.toUpperCase()}</p>
-                                <p><strong>Capacidad:</strong> {classInfo.current_bookings || 0}/{classInfo.capacity}</p>
+                            <div className='space-y-2'>
+                              <h4 className='font-medium text-gray-900'>Información de la Clase</h4>
+                              <div className='space-y-1.5 text-gray-600'>
+                                <p className='flex justify-between'>
+                                  <span>Instructor:</span>
+                                  <span className='font-medium'>{classInfo.instructor_name}</span>
+                                </p>
+                                <p className='flex justify-between'>
+                                  <span>Nivel:</span>
+                                  <span className='font-medium'>{classInfo.level.toUpperCase()}</span>
+                                </p>
+                                <p className='flex justify-between'>
+                                  <span>Capacidad:</span>
+                                  <span className='font-medium'>{classInfo.current_bookings || 0}/{classInfo.capacity}</span>
+                                </p>
                               </div>
                             </div>
-                            <div>
-                              <h4 className='font-medium text-gray-900 mb-1'>Fecha y Hora</h4>
-                              <div className='space-y-1 text-gray-600'>
-                                <p><strong>Fecha:</strong> {formatDate(classInfo.date)}</p>
-                                <p><strong>Horario:</strong> {formatTime(classInfo.start_time)} - {formatTime(classInfo.end_time)}</p>
+                            <div className='space-y-2'>
+                              <h4 className='font-medium text-gray-900'>Fecha y Hora</h4>
+                              <div className='space-y-1.5 text-gray-600'>
+                                <p className='flex justify-between'>
+                                  <span>Fecha:</span>
+                                  <span className='font-medium'>{formatDate(classInfo.date)}</span>
+                                </p>
+                                <p className='flex justify-between'>
+                                  <span>Horario:</span>
+                                  <span className='font-medium'>{formatTime(classInfo.start_time)} - {formatTime(classInfo.end_time)}</span>
+                                </p>
                               </div>
                             </div>
                           </div>

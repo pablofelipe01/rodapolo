@@ -77,7 +77,7 @@ export function BookingModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='max-w-[95vw] sm:max-w-md mx-2 sm:mx-0'>
+      <DialogContent className="max-w-[95vw] sm:max-w-md w-full mx-auto my-8">
         <DialogHeader>
           <DialogTitle className='text-lg sm:text-xl'>Reservar Clase</DialogTitle>
           <DialogDescription className='text-sm'>
