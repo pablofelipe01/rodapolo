@@ -18,6 +18,7 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
   const [levelFilter, setLevelFilter] = useState<'all' | 'alpha' | 'beta' | 'mixed'>('all')
   const [expandedClassId, setExpandedClassId] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [showDesktopFilters, setShowDesktopFilters] = useState(true) // Separate state for desktop
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES', {
@@ -105,8 +106,8 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
         </Button>
       </div>
 
-      {/* Filters - Mobile Collapsible, Desktop Always Visible */}
-      <div className={`${showFilters ? 'block' : 'hidden'} sm:block`}>
+      {/* Filters - Mobile Collapsible, Desktop Toggleable */}
+      <div className={`${showFilters ? 'block' : 'hidden'} ${showDesktopFilters ? 'sm:block' : 'sm:hidden'}`}>
         <Card>
           <CardHeader className='pb-3'>
             <CardTitle className='text-lg flex items-center gap-2'>
@@ -219,11 +220,11 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
             <Button
               variant='outline'
               size='sm'
-              onClick={() => setShowFilters(!showFilters)}
+              onClick={() => setShowDesktopFilters(!showDesktopFilters)}
               className='hidden sm:flex items-center gap-2'
             >
               <Filter className='h-4 w-4' />
-              {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+              {showDesktopFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
             </Button>
           </div>
         </CardHeader>
