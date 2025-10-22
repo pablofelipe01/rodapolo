@@ -1,951 +1,126 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { getStripe } from '@/lib/stripe'
-import { useAuth } from '@/providers/AuthProvider'
-import { createClientSupabase } from '@/lib/supabase'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { useParentalDashboard } from './components/hooks/useParentalDashboard'
+import { DashboardHeader } from './components/DashboardHeader'
+import { StatsCards } from './components/StatsCards'
+import { AlertMessages } from './components/AlertMessages'
+import { ChildrenTab } from './components/ChildrenTab'
+import { ClassesTab } from './components/ClassesTab'
+import { BookingsTab } from './components/BookingsTab'
 import { PostsSection } from '@/components/PostsSection'
-import {
-  Users,
-  Baby,
-  Calendar,
-  Clock,
-  User,
-  Star,
-  Plus,
-  BookOpen,
-  Trophy,
-  Ticket,
-  CreditCard,
-} from 'lucide-react'
-
-type JuniorProfile = {
-  id: string
-  parental_id: string
-  unique_code: string
-  full_name: string
-  nickname: string | null
-  birth_date: string | null
-  avatar_url: string | null
-  handicap: number
-  level: 'alpha' | 'beta'
-  active: boolean
-  created_at: string
-  updated_at: string
-}
-
-type ClassInfo = {
-  id: string
-  date: string
-  start_time: string
-  end_time: string
-  instructor_name: string
-  capacity: number
-  level: 'alpha' | 'beta' | 'mixed'
-  field: string | null
-  notes: string | null
-  current_bookings: number
-}
-
-type Booking = {
-  id: string
-  status: 'confirmed' | 'cancelled' | 'attended' | 'no_show'
-  class_date: string
-  start_time: string
-  end_time: string
-  instructor_name: string
-  junior_name: string
-  junior_nickname: string | null
-}
+import { AddChildModal } from './components/AddChildModal'
+import { BookingModal } from './components/BookingModal'
+import { TicketModal } from './components/TicketModal'
+import { AccessDenied } from './components/AccessDenied'
 
 export default function ParentalDashboard() {
-  const { user, profile } = useAuth()
-  const [children, setChildren] = useState<JuniorProfile[]>([])
-  const [upcomingClasses, setUpcomingClasses] = useState<ClassInfo[]>([])
-  const [bookings, setBookings] = useState<Booking[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null)
-  const [selectedJuniors, setSelectedJuniors] = useState<string[]>([])
-  const [showBookingModal, setShowBookingModal] = useState(false)
-  const [bookingLoading, setBookingLoading] = useState(false)
-  const [showAddChildModal, setShowAddChildModal] = useState(false)
-  const [newChildForm, setNewChildForm] = useState({
-    full_name: '',
-    nickname: '',
-    birth_date: '',
-    level: 'alpha' as 'alpha' | 'beta',
-  })
-  const [availableTickets, setAvailableTickets] = useState(0)
-  const [showTicketModal, setShowTicketModal] = useState(false)
-  const [paymentStatus, setPaymentStatus] = useState<string | null>(null)
-
-  const supabase = createClientSupabase()
-
-  // Función para obtener los hijos del usuario parental
-  const fetchChildren = useCallback(async () => {
-    if (!profile?.id) return
-
-    try {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('junior_profiles')
-        .select('*')
-        .eq('parental_id', profile.id)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      console.log('Children data:', data) // Debug
-      console.log('Profile ID:', profile.id) // Debug
-      setChildren(data || [])
-    } catch (err) {
-      console.error('Error fetching children:', err)
-      setError('Error al cargar perfiles de hijos')
-    } finally {
-      setLoading(false)
-    }
-  }, [profile?.id, supabase])
-
-  // Función para obtener clases próximas
-  const fetchUpcomingClasses = useCallback(async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0]
-
-      const { data, error } = await supabase
-        .from('classes')
-        .select('*')
-        .gte('date', today)
-        .order('date', { ascending: true })
-        .order('start_time', { ascending: true })
-        .limit(10)
-
-      if (error) throw error
-      setUpcomingClasses(data || [])
-    } catch (err) {
-      console.error('Error fetching classes:', err)
-    }
-  }, [supabase])
-
-  // Función para obtener reservas del parental
-  const fetchBookings = useCallback(async () => {
-    if (!profile?.id) return
-
-    try {
-      const { data, error } = await supabase
-        .from('simple_bookings_view')
-        .select('*')
-        .eq('parental_id', profile.id)
-        .order('class_date', { ascending: true })
-
-      if (error) throw error
-      setBookings(data || [])
-    } catch (err) {
-      console.error('Error fetching bookings:', err)
-    }
-  }, [profile?.id, supabase])
-
-  // Función para obtener balance de tickets disponibles
-  const fetchAvailableTickets = useCallback(async () => {
-    if (!profile?.id) return
-
-    try {
-      // Primero obtenemos las compras de tickets del usuario
-      const { data: purchases, error: purchasesError } = await supabase
-        .from('purchased_tickets')
-        .select('id')
-        .eq('parental_id', profile.id)
-
-      if (purchasesError) throw purchasesError
-
-      if (!purchases || purchases.length === 0) {
-        setAvailableTickets(0)
-        return
-      }
-
-      // Luego contamos los ticket_units disponibles de esas compras
-      // @ts-expect-error - Temporary ignore for type inference issue
-      const purchaseIds = purchases.map(p => p.id)
-      const { data: tickets, error: ticketsError } = await supabase
-        .from('ticket_units')
-        .select('*', { count: 'exact' })
-        .in('purchase_id', purchaseIds)
-        .eq('status', 'available')
-
-      if (ticketsError) throw ticketsError
-      setAvailableTickets(tickets?.length || 0)
-    } catch (err) {
-      console.error('Error fetching tickets:', err)
-      setAvailableTickets(0)
-    }
-  }, [profile?.id, supabase])
-
-  // Función para crear una reserva
-  const createBooking = async (classId: string, juniorIds: string[]) => {
-    if (!profile?.id || juniorIds.length === 0) return
-
-    try {
-      setBookingLoading(true)
-
-      const successCount = []
-      const errors = []
-
-      console.log('🔍 Creando reservas para:', juniorIds.length, 'hijo(s)')
-
-      // Crear una reserva para cada hijo seleccionado
-      for (const juniorId of juniorIds) {
-        try {
-          console.log('🔍 Creando reserva con parámetros:', {
-            p_junior_id: juniorId,
-            p_class_id: classId,
-          })
-
-          const { data, error } = await supabase.rpc(
-            'create_reservation_final',
-            // @ts-expect-error - Temporary ignore for type inference issue
-            {
-              p_junior_id: juniorId,
-              p_class_id: classId,
-            }
-          )
-
-          console.log('🔍 Respuesta de create_reservation_final:', {
-            data,
-            error,
-          })
-
-          // Revisar si la función devolvió un error dentro de data
-          // @ts-expect-error - Supabase function return type inference issue
-          if (data && data.success === false) {
-            // @ts-expect-error - Supabase function return type inference issue
-            console.error('🚨 Error dentro de data:', data.error)
-            // @ts-expect-error - Supabase function return type inference issue
-            console.error('🔍 Debug info:', data.debug)
-            // @ts-expect-error - Supabase function return type inference issue
-            console.error('🔍 Parental ID:', data.parental_id)
-            console.error('🔍 Full data object:', JSON.stringify(data, null, 2))
-            // @ts-expect-error - Supabase function return type inference issue
-            errors.push(`Error para ${juniorId}: ${data.error}`)
-            continue
-          }
-
-          if (error) {
-            console.error('🚨 Error en create_reservation_final:', error)
-            errors.push(`Error para ${juniorId}: ${error.message}`)
-            continue
-          }
-
-          console.log('✅ Booking creado exitosamente para junior:', juniorId)
-          successCount.push(juniorId)
-        } catch (err: unknown) {
-          console.error('🚨 Error creating booking para junior:', juniorId, err)
-          const errorMessage =
-            err instanceof Error ? err.message : 'Error desconocido'
-          errors.push(`Error para ${juniorId}: ${errorMessage}`)
-        }
-      }
-
-      // Refrescar datos
-      await Promise.all([fetchBookings(), fetchUpcomingClasses()])
-
-      setError(null)
-      setShowBookingModal(false)
-      setSelectedClass(null)
-      setSelectedJuniors([])
-
-      // Mostrar mensaje basado en los resultados
-      if (successCount.length === juniorIds.length) {
-        alert(`¡${successCount.length} reserva(s) creada(s) exitosamente!`)
-      } else if (successCount.length > 0) {
-        alert(
-          `${successCount.length} de ${juniorIds.length} reservas creadas exitosamente. Algunos errores ocurrieron.`
-        )
-        if (errors.length > 0) {
-          console.error('🚨 Errores en algunas reservas:', errors)
-        }
-      } else {
-        throw new Error(
-          'No se pudo crear ninguna reserva: ' + errors.join(', ')
-        )
-      }
-    } catch (err: unknown) {
-      console.error('🚨 Error creating bookings:', err)
-      console.error('🚨 Error type:', typeof err)
-      console.error('🚨 Error constructor:', err?.constructor?.name)
-
-      if (err && typeof err === 'object') {
-        console.error('🚨 Error keys:', Object.keys(err))
-        console.error('🚨 Error JSON:', JSON.stringify(err, null, 2))
-      }
-
-      const errorMessage =
-        err instanceof Error ? err.message : 'Error al crear las reservas'
-      setError(errorMessage)
-    } finally {
-      setBookingLoading(false)
-    }
-  }
-
-  // Función para abrir modal de reserva
-  const openBookingModal = (classInfo: ClassInfo) => {
-    setSelectedClass(classInfo)
-    setSelectedJuniors([])
-    setShowBookingModal(true)
-  }
-
-  // Función para confirmar reserva
-  const handleConfirmBooking = async () => {
-    if (!selectedClass || selectedJuniors.length === 0) return
-    await createBooking(selectedClass.id, selectedJuniors)
-  }
-
-  // Función para manejar selección múltiple de hijos
-  const toggleJuniorSelection = (juniorId: string) => {
-    setSelectedJuniors(prev => {
-      if (prev.includes(juniorId)) {
-        return prev.filter(id => id !== juniorId)
-      } else {
-        return [...prev, juniorId]
-      }
-    })
-  }
-
-  // Función para crear un nuevo hijo
-  const createChild = async () => {
-    if (!profile?.id || !newChildForm.full_name) return
-
-    try {
-      setLoading(true)
-
-      // Generar código único de 7 caracteres
-      const randomCode = Math.random()
-        .toString(36)
-        .substring(2, 9)
-        .toUpperCase()
-      const uniqueCode = randomCode.padEnd(7, '0') // Asegurar que tenga exactamente 7 caracteres
-
-      const { error } = await supabase
-        .from('junior_profiles')
-        // @ts-expect-error - Supabase type inference issue with insert operation
-        .insert({
-          parental_id: profile.id,
-          unique_code: uniqueCode,
-          full_name: newChildForm.full_name,
-          nickname: newChildForm.nickname || null,
-          birth_date: newChildForm.birth_date || null,
-          level: newChildForm.level,
-          active: true,
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      // Actualizar lista de hijos
-      await fetchChildren()
-
-      // Limpiar formulario y cerrar modal
-      setNewChildForm({
-        full_name: '',
-        nickname: '',
-        birth_date: '',
-        level: 'alpha',
-      })
-      setShowAddChildModal(false)
-
-      alert('¡Hijo agregado exitosamente!')
-    } catch (err) {
-      console.error('Error creating child:', err)
-      setError('Error al crear el perfil del hijo')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Función para comprar tickets
-  const purchaseTickets = async (packageType: string) => {
-    if (!profile?.id) return
-
-    try {
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          packageType,
-          parentalId: profile.id,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al crear sesión de pago')
-      }
-
-      const stripe = await getStripe()
-      if (!stripe) {
-        throw new Error('Stripe no está disponible')
-      }
-
-      const { error } = await stripe.redirectToCheckout({
-        sessionId: data.sessionId,
-      })
-
-      if (error) {
-        throw new Error(error.message)
-      }
-    } catch (err) {
-      console.error('Error purchasing tickets:', err)
-      alert('Error al procesar la compra. Por favor, intenta de nuevo.')
-    }
-  }
-
-  // Función para abrir modal de agregar hijo
-  const openAddChildModal = () => {
-    setShowAddChildModal(true)
-  }
-
-  useEffect(() => {
-    if (profile?.role === 'parental') {
-      fetchChildren()
-      fetchUpcomingClasses()
-      fetchBookings()
-      fetchAvailableTickets()
-    }
-  }, [
+  const {
+    user,
     profile,
-    fetchChildren,
-    fetchUpcomingClasses,
-    fetchBookings,
-    fetchAvailableTickets,
-  ])
+    loading,
+    error,
+    stats,
+    children,
+    upcomingClasses,
+    bookings,
+    selectedClass,
+    selectedJuniors,
+    showBookingModal,
+    bookingLoading,
+    showAddChildModal,
+    newChildForm,
+    availableTickets,
+    showTicketModal,
+    paymentStatus,
+    setError,
+    setShowBookingModal,
+    setSelectedClass,
+    setSelectedJuniors,
+    setShowAddChildModal,
+    setNewChildForm,
+    setShowTicketModal,
+    createChild,
+    purchaseTickets,
+    toggleJuniorSelection,
+    openBookingModal,
+    handleConfirmBooking,
+    hasExistingBooking,
+  } = useParentalDashboard()
 
-  // Verificar estado del pago en la URL
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const payment = urlParams.get('payment')
-
-    if (payment === 'success') {
-      setPaymentStatus('success')
-      // Actualizar tickets después del pago exitoso
-      fetchAvailableTickets()
-      // Limpiar URL
-      window.history.replaceState({}, '', '/parental')
-    } else if (payment === 'cancelled') {
-      setPaymentStatus('cancelled')
-      // Limpiar URL
-      window.history.replaceState({}, '', '/parental')
-    }
-  }, [fetchAvailableTickets])
-
-  // Función para obtener estadísticas
-  const getStats = () => {
-    const totalChildren = children.length
-    const activeChildren = children.filter(child => child.active).length
-    const alphaChildren = children.filter(
-      child => child.level === 'alpha'
-    ).length
-    const betaChildren = children.filter(child => child.level === 'beta').length
-
-    return {
-      totalChildren,
-      activeChildren,
-      alphaChildren,
-      betaChildren,
-    }
-  }
-
-  // Función para formatear fecha
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
-  }
-
-  // Función para formatear hora
-  const formatTime = (timeString: string) => {
-    return timeString.slice(0, 5) // HH:MM
-  }
-
-  // Verificar acceso
   if (!user) {
-    return (
-      <div className='text-center py-12'>
-        <Alert className='max-w-md mx-auto'>
-          <AlertDescription>
-            Debes iniciar sesión para acceder al dashboard parental.
-          </AlertDescription>
-        </Alert>
-      </div>
-    )
+    return <AccessDenied message="Debes iniciar sesión para acceder al dashboard parental." />
   }
 
   if (profile?.role !== 'parental') {
-    return (
-      <div className='text-center py-12'>
-        <Alert className='max-w-md mx-auto border-orange-200 bg-orange-50'>
-          <AlertDescription className='text-orange-800'>
-            Esta área es solo para usuarios parentales.
-          </AlertDescription>
-        </Alert>
-      </div>
-    )
+    return <AccessDenied message="Esta área es solo para usuarios parentales." />
   }
 
-  const stats = getStats()
-
   return (
-    <div className='space-y-6'>
-      <div className='flex items-center justify-between'>
-        <div>
-          <h1 className='text-3xl font-bold tracking-tight'>
-            ¡Hola, {profile.full_name}!
-          </h1>
-          <p className='text-gray-600'>
-            Bienvenido al portal de familias de Rodapolo
-          </p>
-        </div>
-      </div>
+    <div className='space-y-6 px-2 sm:px-4 lg:px-0'>
+      <DashboardHeader profile={profile} />
+      
+      <AlertMessages error={error} paymentStatus={paymentStatus} />
+      
+      <StatsCards 
+        stats={stats} 
+        availableTickets={availableTickets} 
+        onBuyTickets={() => setShowTicketModal(true)} 
+      />
 
-      {/* Mensajes de error */}
-      {error && (
-        <Alert className='border-red-200 bg-red-50'>
-          <AlertDescription className='text-red-800'>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Alertas de estado de pago */}
-      {paymentStatus === 'success' && (
-        <Alert className='border-green-200 bg-green-50'>
-          <AlertDescription className='text-green-800'>
-            ¡Pago exitoso! Tus tickets han sido agregados a tu cuenta.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {paymentStatus === 'cancelled' && (
-        <Alert className='border-yellow-200 bg-yellow-50'>
-          <AlertDescription className='text-yellow-800'>
-            Pago cancelado. Puedes intentar nuevamente cuando quieras.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Estadísticas */}
-      <div className='grid grid-cols-1 md:grid-cols-5 gap-4'>
-        <Card>
-          <CardContent className='p-6'>
-            <div className='flex items-center'>
-              <div className='rounded-full bg-blue-500 p-3'>
-                <Baby className='h-6 w-6 text-white' />
-              </div>
-              <div className='ml-4'>
-                <p className='text-sm font-medium text-gray-600'>Mis Hijos</p>
-                <p className='text-2xl font-bold text-gray-900'>
-                  {stats.totalChildren}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className='p-6'>
-            <div className='flex items-center'>
-              <div className='rounded-full bg-green-500 p-3'>
-                <Users className='h-6 w-6 text-white' />
-              </div>
-              <div className='ml-4'>
-                <p className='text-sm font-medium text-gray-600'>Activos</p>
-                <p className='text-2xl font-bold text-gray-900'>
-                  {stats.activeChildren}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className='p-6'>
-            <div className='flex items-center'>
-              <div className='rounded-full bg-purple-500 p-3'>
-                <Star className='h-6 w-6 text-white' />
-              </div>
-              <div className='ml-4'>
-                <p className='text-sm font-medium text-gray-600'>Nivel Alpha</p>
-                <p className='text-2xl font-bold text-gray-900'>
-                  {stats.alphaChildren}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className='p-6'>
-            <div className='flex items-center'>
-              <div className='rounded-full bg-orange-500 p-3'>
-                <Trophy className='h-6 w-6 text-white' />
-              </div>
-              <div className='ml-4'>
-                <p className='text-sm font-medium text-gray-600'>Nivel Beta</p>
-                <p className='text-2xl font-bold text-gray-900'>
-                  {stats.betaChildren}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className='p-6'>
-            <div className='flex items-center'>
-              <div className='rounded-full bg-indigo-500 p-3'>
-                <Ticket className='h-6 w-6 text-white' />
-              </div>
-              <div className='ml-4'>
-                <p className='text-sm font-medium text-gray-600'>Tickets</p>
-                <p className='text-2xl font-bold text-gray-900'>
-                  {availableTickets}
-                </p>
-              </div>
-            </div>
-            <div className='mt-3'>
-              <Button
-                size='sm'
-                className='w-full bg-indigo-600 hover:bg-indigo-700'
-                onClick={() => setShowTicketModal(true)}
-              >
-                <CreditCard className='h-4 w-4 mr-2' />
-                Comprar Tickets
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tabs para contenido */}
       <Tabs defaultValue='children' className='w-full'>
-        <TabsList className='grid w-full grid-cols-4'>
-          <TabsTrigger value='children'>Mis Hijos</TabsTrigger>
-          <TabsTrigger value='classes'>Clases Disponibles</TabsTrigger>
-          <TabsTrigger value='bookings'>Mis Reservas</TabsTrigger>
-          <TabsTrigger value='posts'>Contenido</TabsTrigger>
+        <TabsList className='grid w-full grid-cols-4 gap-1 p-1 bg-muted/50'>
+          <TabsTrigger 
+            value='children' 
+            className='text-xs sm:text-sm px-1 sm:px-3 py-2 data-[state=active]:bg-background'
+          >
+            <span className='hidden xs:inline'>Mis Hijos</span>
+            <span className='xs:hidden'>Hijos</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value='classes' 
+            className='text-xs sm:text-sm px-1 sm:px-3 py-2 data-[state=active]:bg-background'
+          >
+            <span className='hidden xs:inline'>Clases</span>
+            <span className='xs:hidden'>Clases</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value='bookings' 
+            className='text-xs sm:text-sm px-1 sm:px-3 py-2 data-[state=active]:bg-background'
+          >
+            <span className='hidden xs:inline'>Reservas</span>
+            <span className='xs:hidden'>Reservas</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value='posts' 
+            className='text-xs sm:text-sm px-1 sm:px-3 py-2 data-[state=active]:bg-background'
+          >
+            <span className='hidden xs:inline'>Contenido</span>
+            <span className='xs:hidden'>Posts</span>
+          </TabsTrigger>
         </TabsList>
 
-        {/* Tab de Hijos */}
-        <TabsContent value='children' className='space-y-4'>
-          <div className='flex justify-between items-center'>
-            <h2 className='text-xl font-semibold'>Perfiles de Mis Hijos</h2>
-            <Button onClick={openAddChildModal}>
-              <Plus className='mr-2 h-4 w-4' />
-              Agregar Hijo
-            </Button>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Lista de Hijos</CardTitle>
-              <CardDescription>
-                Administra los perfiles de tus hijos registrados
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className='text-center py-8'>
-                  <div className='text-sm text-gray-500'>
-                    Cargando perfiles...
-                  </div>
-                </div>
-              ) : children.length === 0 ? (
-                <div className='text-center py-8'>
-                  <Baby className='mx-auto h-12 w-12 text-gray-400' />
-                  <h3 className='mt-2 text-sm font-medium text-gray-900'>
-                    No hay hijos registrados
-                  </h3>
-                  <p className='mt-1 text-sm text-gray-500'>
-                    Contacta al administrador para registrar a tus hijos.
-                  </p>
-                </div>
-              ) : (
-                <div className='space-y-4'>
-                  {children.map(child => (
-                    <div
-                      key={child.id}
-                      className='flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50'
-                    >
-                      <div className='flex items-center space-x-4'>
-                        <div className='flex-shrink-0'>
-                          <div className='w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center'>
-                            <span className='text-lg font-medium text-blue-600'>
-                              {child.full_name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                        </div>
-                        <div>
-                          <div className='flex items-center gap-2'>
-                            <h3 className='text-lg font-medium text-gray-900'>
-                              {child.full_name}
-                            </h3>
-                            {child.nickname && (
-                              <span className='text-sm text-gray-500'>
-                                &ldquo;{child.nickname}&rdquo;
-                              </span>
-                            )}
-                            <Badge
-                              variant={
-                                child.level === 'alpha'
-                                  ? 'default'
-                                  : 'secondary'
-                              }
-                            >
-                              {child.level.toUpperCase()}
-                            </Badge>
-                            <Badge
-                              variant={child.active ? 'default' : 'destructive'}
-                            >
-                              {child.active ? 'Activo' : 'Inactivo'}
-                            </Badge>
-                          </div>
-                          <div className='flex items-center gap-4 mt-1 text-sm text-gray-500'>
-                            <div className='flex items-center gap-1'>
-                              <User className='w-3 h-3' />
-                              Código: {child.unique_code}
-                            </div>
-                            <div className='flex items-center gap-1'>
-                              <Star className='w-3 h-3' />
-                              Handicap: {child.handicap}
-                            </div>
-                            {child.birth_date && (
-                              <div className='flex items-center gap-1'>
-                                <Calendar className='w-3 h-3' />
-                                {new Date(
-                                  child.birth_date
-                                ).toLocaleDateString()}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value='children' className='space-y-4 mt-4'>
+          <ChildrenTab
+            children={children}
+            loading={loading}
+            onAddChild={() => setShowAddChildModal(true)}
+          />
         </TabsContent>
 
-        {/* Tab de Clases */}
-        <TabsContent value='classes' className='space-y-4'>
-          <div className='flex justify-between items-center'>
-            <h2 className='text-xl font-semibold'>Clases Disponibles</h2>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Próximas Clases</CardTitle>
-              <CardDescription>
-                Clases disponibles para reservar
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {upcomingClasses.length === 0 ? (
-                <div className='text-center py-8'>
-                  <BookOpen className='mx-auto h-12 w-12 text-gray-400' />
-                  <h3 className='mt-2 text-sm font-medium text-gray-900'>
-                    No hay clases programadas
-                  </h3>
-                  <p className='mt-1 text-sm text-gray-500'>
-                    Las clases aparecerán aquí cuando estén disponibles.
-                  </p>
-                </div>
-              ) : (
-                <div className='space-y-4'>
-                  {upcomingClasses.map(classInfo => (
-                    <div
-                      key={classInfo.id}
-                      className='flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50'
-                    >
-                      <div className='flex items-center space-x-4'>
-                        <div className='flex-shrink-0'>
-                          <div className='w-12 h-12 bg-green-100 rounded-full flex items-center justify-center'>
-                            <BookOpen className='h-6 w-6 text-green-600' />
-                          </div>
-                        </div>
-                        <div>
-                          <div className='flex items-center gap-2'>
-                            <h3 className='text-lg font-medium text-gray-900'>
-                              {classInfo.instructor_name}
-                            </h3>
-                            <Badge
-                              variant={
-                                classInfo.level === 'mixed'
-                                  ? 'outline'
-                                  : classInfo.level === 'alpha'
-                                    ? 'default'
-                                    : 'secondary'
-                              }
-                            >
-                              {classInfo.level === 'mixed'
-                                ? 'MIXTO'
-                                : classInfo.level.toUpperCase()}
-                            </Badge>
-                          </div>
-                          <div className='flex items-center gap-4 mt-1 text-sm text-gray-500'>
-                            <div className='flex items-center gap-1'>
-                              <Calendar className='w-3 h-3' />
-                              {formatDate(classInfo.date)}
-                            </div>
-                            <div className='flex items-center gap-1'>
-                              <Clock className='w-3 h-3' />
-                              {formatTime(classInfo.start_time)} -{' '}
-                              {formatTime(classInfo.end_time)}
-                            </div>
-                            <div className='flex items-center gap-1'>
-                              <Users className='w-3 h-3' />
-                              {classInfo.current_bookings || 0}/
-                              {classInfo.capacity}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className='flex items-center gap-2'>
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          onClick={() => openBookingModal(classInfo)}
-                          disabled={children.length === 0}
-                        >
-                          Reservar
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value='classes' className='space-y-4 mt-4'>
+          <ClassesTab
+            classes={upcomingClasses}
+            children={children}
+            onBookClass={openBookingModal}
+          />
         </TabsContent>
 
-        {/* Tab de Reservas */}
-        <TabsContent value='bookings' className='space-y-4'>
-          <div className='flex justify-between items-center'>
-            <h2 className='text-xl font-semibold'>Mis Reservas</h2>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Reservas Activas</CardTitle>
-              <CardDescription>
-                Historial y estado de tus reservas
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {bookings.length === 0 ? (
-                <div className='text-center py-8'>
-                  <Calendar className='mx-auto h-12 w-12 text-gray-400' />
-                  <h3 className='mt-2 text-sm font-medium text-gray-900'>
-                    No hay reservas activas
-                  </h3>
-                  <p className='mt-1 text-sm text-gray-500'>
-                    Tus reservas aparecerán aquí una vez que reserves clases.
-                  </p>
-                </div>
-              ) : (
-                <div className='space-y-4'>
-                  {bookings.map(booking => (
-                    <div
-                      key={booking.id}
-                      className='flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50'
-                    >
-                      <div className='flex items-center space-x-4'>
-                        <div className='flex-shrink-0'>
-                          <div
-                            className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                              booking.status === 'confirmed'
-                                ? 'bg-green-100'
-                                : 'bg-gray-100'
-                            }`}
-                          >
-                            <BookOpen className='h-6 w-6 text-green-600' />
-                          </div>
-                        </div>
-                        <div>
-                          <div className='flex items-center gap-2'>
-                            <h3 className='text-lg font-medium text-gray-900'>
-                              {booking.instructor_name}
-                            </h3>
-                            <Badge
-                              variant={
-                                booking.status === 'confirmed'
-                                  ? 'default'
-                                  : 'secondary'
-                              }
-                            >
-                              {booking.status === 'confirmed'
-                                ? 'CONFIRMADA'
-                                : booking.status.toUpperCase()}
-                            </Badge>
-                          </div>
-                          <div className='flex items-center gap-4 mt-1 text-sm text-gray-500'>
-                            <div className='flex items-center gap-1'>
-                              <User className='w-3 h-3' />
-                              {booking.junior_name}
-                            </div>
-                            <div className='flex items-center gap-1'>
-                              <Calendar className='w-3 h-3' />
-                              {formatDate(booking.class_date)}
-                            </div>
-                            <div className='flex items-center gap-1'>
-                              <Clock className='w-3 h-3' />
-                              {formatTime(booking.start_time)} -{' '}
-                              {formatTime(booking.end_time)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value='bookings' className='space-y-4 mt-4'>
+          <BookingsTab bookings={bookings} classes={upcomingClasses} />
         </TabsContent>
 
-        {/* Tab de Posts */}
-        <TabsContent value='posts' className='space-y-4'>
+        <TabsContent value='posts' className='space-y-4 mt-4'>
           <div className='flex justify-between items-center'>
             <h2 className='text-xl font-semibold'>Contenido Educativo</h2>
           </div>
@@ -953,314 +128,33 @@ export default function ParentalDashboard() {
         </TabsContent>
       </Tabs>
 
-      {/* Modal de Reserva */}
-      <Dialog open={showBookingModal} onOpenChange={setShowBookingModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reservar Clase</DialogTitle>
-            <DialogDescription>
-              Selecciona para cuál(es) de tus hijos quieres reservar esta clase
-            </DialogDescription>
-          </DialogHeader>
+      <AddChildModal
+        open={showAddChildModal}
+        onOpenChange={setShowAddChildModal}
+        formData={newChildForm}
+        onFormChange={setNewChildForm}
+        onSubmit={createChild}
+        loading={loading}
+      />
 
-          {selectedClass && (
-            <div className='space-y-4'>
-              <div className='p-4 bg-gray-50 rounded-lg'>
-                <h3 className='font-medium'>{selectedClass.instructor_name}</h3>
-                <div className='flex items-center gap-4 mt-2 text-sm text-gray-600'>
-                  <span>{formatDate(selectedClass.date)}</span>
-                  <span>
-                    {formatTime(selectedClass.start_time)} -{' '}
-                    {formatTime(selectedClass.end_time)}
-                  </span>
-                  <Badge
-                    variant={
-                      selectedClass.level === 'mixed' ? 'outline' : 'default'
-                    }
-                  >
-                    {selectedClass.level === 'mixed'
-                      ? 'MIXTO'
-                      : selectedClass.level.toUpperCase()}
-                  </Badge>
-                </div>
-              </div>
+      <BookingModal
+        open={showBookingModal}
+        onOpenChange={setShowBookingModal}
+        selectedClass={selectedClass}
+        selectedJuniors={selectedJuniors}
+        children={children}
+        onToggleJunior={toggleJuniorSelection}
+        onConfirm={handleConfirmBooking}
+        loading={bookingLoading}
+        hasExistingBooking={hasExistingBooking}
+      />
 
-              <div className='space-y-3'>
-                <label className='text-sm font-medium'>
-                  Seleccionar hijo(s):
-                </label>
-                <div className='space-y-3 max-h-48 overflow-y-auto'>
-                  {children
-                    .filter(
-                      child =>
-                        child.active &&
-                        (selectedClass.level === 'mixed' ||
-                          child.level === selectedClass.level)
-                    )
-                    .map(child => (
-                      <div
-                        key={child.id}
-                        className='flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50'
-                      >
-                        <Checkbox
-                          id={`junior-${child.id}`}
-                          checked={selectedJuniors.includes(child.id)}
-                          onCheckedChange={() =>
-                            toggleJuniorSelection(child.id)
-                          }
-                        />
-                        <label
-                          htmlFor={`junior-${child.id}`}
-                          className='flex items-center gap-2 cursor-pointer flex-1'
-                        >
-                          <span>{child.full_name}</span>
-                          <Badge variant='outline'>
-                            {child.level.toUpperCase()}
-                          </Badge>
-                        </label>
-                      </div>
-                    ))}
-                </div>
-                {children.filter(
-                  child =>
-                    child.active &&
-                    (selectedClass.level === 'mixed' ||
-                      child.level === selectedClass.level)
-                ).length === 0 && (
-                  <p className='text-sm text-gray-500 italic'>
-                    No tienes hijos disponibles para esta clase.
-                  </p>
-                )}
-              </div>
-
-              <div className='flex justify-end gap-2 pt-4'>
-                <Button
-                  variant='outline'
-                  onClick={() => setShowBookingModal(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleConfirmBooking}
-                  disabled={selectedJuniors.length === 0 || bookingLoading}
-                >
-                  {bookingLoading
-                    ? 'Reservando...'
-                    : selectedJuniors.length === 1
-                      ? 'Confirmar Reserva'
-                      : `Confirmar ${selectedJuniors.length} Reservas`}
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal para agregar hijo */}
-      <Dialog open={showAddChildModal} onOpenChange={setShowAddChildModal}>
-        <DialogContent className='sm:max-w-[425px]'>
-          <DialogHeader>
-            <DialogTitle>Agregar Nuevo Hijo</DialogTitle>
-            <DialogDescription>
-              Completa la información para registrar un nuevo hijo
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className='space-y-4'>
-            <div className='space-y-2'>
-              <Label htmlFor='full_name'>Nombre completo *</Label>
-              <Input
-                id='full_name'
-                placeholder='Nombre completo del hijo/a'
-                value={newChildForm.full_name}
-                onChange={e =>
-                  setNewChildForm(prev => ({
-                    ...prev,
-                    full_name: e.target.value,
-                  }))
-                }
-              />
-            </div>
-
-            <div className='space-y-2'>
-              <Label htmlFor='nickname'>Apodo (opcional)</Label>
-              <Input
-                id='nickname'
-                placeholder='Apodo o diminutivo'
-                value={newChildForm.nickname}
-                onChange={e =>
-                  setNewChildForm(prev => ({
-                    ...prev,
-                    nickname: e.target.value,
-                  }))
-                }
-              />
-            </div>
-
-            <div className='space-y-2'>
-              <Label htmlFor='birth_date'>Fecha de nacimiento (opcional)</Label>
-              <Input
-                id='birth_date'
-                type='date'
-                value={newChildForm.birth_date}
-                onChange={e =>
-                  setNewChildForm(prev => ({
-                    ...prev,
-                    birth_date: e.target.value,
-                  }))
-                }
-              />
-            </div>
-
-            <div className='space-y-2'>
-              <Label>Nivel inicial</Label>
-              <Select
-                value={newChildForm.level}
-                onValueChange={value =>
-                  setNewChildForm(prev => ({
-                    ...prev,
-                    level: value as 'alpha' | 'beta',
-                  }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='alpha'>Alpha (Principiante)</SelectItem>
-                  <SelectItem value='beta'>Beta (Intermedio)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className='flex justify-end gap-2 pt-4'>
-              <Button
-                variant='outline'
-                onClick={() => setShowAddChildModal(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={createChild}
-                disabled={!newChildForm.full_name || loading}
-              >
-                {loading ? 'Creando...' : 'Crear Hijo'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal de compra de tickets */}
-      <Dialog open={showTicketModal} onOpenChange={setShowTicketModal}>
-        <DialogContent className='max-w-md'>
-          <DialogHeader>
-            <DialogTitle>Comprar Tickets</DialogTitle>
-            <DialogDescription>
-              Selecciona un paquete de tickets para las clases de tus hijos
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className='space-y-4'>
-            {/* Mostrar tickets actuales */}
-            <div className='bg-indigo-50 p-4 rounded-lg'>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <p className='font-medium text-indigo-900'>
-                    Tickets Disponibles
-                  </p>
-                  <p className='text-sm text-indigo-600'>
-                    Puedes usar estos tickets para reservar clases
-                  </p>
-                </div>
-                <div className='text-2xl font-bold text-indigo-900'>
-                  {availableTickets}
-                </div>
-              </div>
-            </div>
-
-            {/* Paquetes de tickets */}
-            <div className='space-y-3'>
-              <h4 className='font-medium'>Paquetes Disponibles</h4>
-
-              <Card className='border-2 hover:border-indigo-200 cursor-pointer transition-colors'>
-                <CardContent className='p-4'>
-                  <div className='flex items-center justify-between'>
-                    <div>
-                      <h5 className='font-semibold'>Paquete Básico</h5>
-                      <p className='text-sm text-gray-600'>5 tickets</p>
-                    </div>
-                    <div className='text-right'>
-                      <p className='text-lg font-bold'>$25.00</p>
-                      <p className='text-xs text-gray-500'>$5.00 por ticket</p>
-                    </div>
-                  </div>
-                  <Button
-                    className='w-full mt-3 bg-indigo-600 hover:bg-indigo-700'
-                    onClick={() => purchaseTickets('basic')}
-                  >
-                    Comprar 5 Tickets
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className='border-2 hover:border-indigo-200 cursor-pointer transition-colors'>
-                <CardContent className='p-4'>
-                  <div className='flex items-center justify-between'>
-                    <div>
-                      <h5 className='font-semibold'>Paquete Popular</h5>
-                      <p className='text-sm text-gray-600'>10 tickets</p>
-                      <Badge variant='secondary' className='mt-1'>
-                        Más vendido
-                      </Badge>
-                    </div>
-                    <div className='text-right'>
-                      <p className='text-lg font-bold'>$45.00</p>
-                      <p className='text-xs text-gray-500'>$4.50 por ticket</p>
-                      <p className='text-xs text-green-600 font-medium'>
-                        Ahorra $5.00
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    className='w-full mt-3 bg-indigo-600 hover:bg-indigo-700'
-                    onClick={() => purchaseTickets('popular')}
-                  >
-                    Comprar 10 Tickets
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className='border-2 hover:border-indigo-200 cursor-pointer transition-colors'>
-                <CardContent className='p-4'>
-                  <div className='flex items-center justify-between'>
-                    <div>
-                      <h5 className='font-semibold'>Paquete Premium</h5>
-                      <p className='text-sm text-gray-600'>20 tickets</p>
-                      <Badge variant='secondary' className='mt-1'>
-                        Mejor valor
-                      </Badge>
-                    </div>
-                    <div className='text-right'>
-                      <p className='text-lg font-bold'>$80.00</p>
-                      <p className='text-xs text-gray-500'>$4.00 por ticket</p>
-                      <p className='text-xs text-green-600 font-medium'>
-                        Ahorra $20.00
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    className='w-full mt-3 bg-indigo-600 hover:bg-indigo-700'
-                    onClick={() => purchaseTickets('premium')}
-                  >
-                    Comprar 20 Tickets
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <TicketModal
+        open={showTicketModal}
+        onOpenChange={setShowTicketModal}
+        availableTickets={availableTickets}
+        onPurchase={purchaseTickets}
+      />
     </div>
   )
 }
