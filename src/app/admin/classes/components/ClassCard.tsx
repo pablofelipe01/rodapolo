@@ -11,7 +11,12 @@ interface ClassCardProps {
   onViewDetails: (classItem: ClassRow) => void
 }
 
-export function ClassCard({ classItem, onEdit, onDelete, onViewDetails }: ClassCardProps) {
+export function ClassCard({
+  classItem,
+  onEdit,
+  onDelete,
+  onViewDetails,
+}: ClassCardProps) {
   const formatDateForDisplay = (dateString: string) => {
     const [year, month, day] = dateString.split('-')
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
@@ -52,7 +57,7 @@ export function ClassCard({ classItem, onEdit, onDelete, onViewDetails }: ClassC
 
   const getCityBadge = (field: string | null) => {
     if (!field) return null
-    
+
     const variants = {
       sotogrande: 'default',
       marbella: 'secondary',
@@ -60,7 +65,7 @@ export function ClassCard({ classItem, onEdit, onDelete, onViewDetails }: ClassC
 
     return (
       <Badge variant={variants[field as keyof typeof variants] || 'default'}>
-        <MapPin className="h-3 w-3 mr-1" />
+        <MapPin className='h-3 w-3 mr-1' />
         {field === 'sotogrande' && 'Sotogrande'}
         {field === 'marbella' && 'Marbella'}
       </Badge>
@@ -77,22 +82,35 @@ export function ClassCard({ classItem, onEdit, onDelete, onViewDetails }: ClassC
               <div className='flex items-center gap-4 mb-2'>
                 <div className='flex items-center gap-2'>
                   <Calendar className='h-4 w-4 text-gray-500' />
-                  <span className='font-medium'>{formatDateForDisplay(classItem.date)}</span>
+                  <span className='font-medium'>
+                    {formatDateForDisplay(classItem.date)}
+                  </span>
                 </div>
                 <div className='flex items-center gap-2'>
                   <Clock className='h-4 w-4 text-gray-500' />
-                  <span>{classItem.start_time} - {classItem.end_time}</span>
+                  <span>
+                    {classItem.start_time} - {classItem.end_time}
+                  </span>
                 </div>
               </div>
 
               <div className='flex items-center gap-4 mb-2'>
                 <div className='flex items-center gap-2'>
                   <Users className='h-4 w-4 text-gray-500' />
-                  <span>{classItem.current_bookings}/{classItem.capacity} cupos</span>
+                  <span>
+                    {classItem.current_bookings}/{classItem.capacity} cupos
+                  </span>
                 </div>
-                <span className='text-gray-600'>Instructor: {classItem.instructor_name}</span>
+                <span className='text-gray-600'>
+                  Instructor: {classItem.instructor_name}
+                </span>
                 {classItem.field && (
-                  <span className='text-gray-600'>Ciudad: {classItem.field === 'sotogrande' ? 'Sotogrande' : 'Marbella'}</span>
+                  <span className='text-gray-600'>
+                    Ciudad:{' '}
+                    {classItem.field === 'sotogrande'
+                      ? 'Sotogrande'
+                      : 'Marbella'}
+                  </span>
                 )}
               </div>
 

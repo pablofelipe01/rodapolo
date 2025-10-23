@@ -33,10 +33,7 @@ export default function ParentalDashboard() {
     availableTickets,
     showTicketModal,
     paymentStatus,
-    setError,
     setShowBookingModal,
-    setSelectedClass,
-    setSelectedJuniors,
     setShowAddChildModal,
     setNewChildForm,
     setShowTicketModal,
@@ -49,50 +46,54 @@ export default function ParentalDashboard() {
   } = useParentalDashboard()
 
   if (!user) {
-    return <AccessDenied message="Debes iniciar sesión para acceder al dashboard parental." />
+    return (
+      <AccessDenied message='Debes iniciar sesión para acceder al dashboard parental.' />
+    )
   }
 
   if (profile?.role !== 'parental') {
-    return <AccessDenied message="Esta área es solo para usuarios parentales." />
+    return (
+      <AccessDenied message='Esta área es solo para usuarios parentales.' />
+    )
   }
 
   return (
     <div className='space-y-6 px-2 sm:px-4 lg:px-0'>
       <DashboardHeader profile={profile} />
-      
+
       <AlertMessages error={error} paymentStatus={paymentStatus} />
-      
-      <StatsCards 
-        stats={stats} 
-        availableTickets={availableTickets} 
-        onBuyTickets={() => setShowTicketModal(true)} 
+
+      <StatsCards
+        stats={stats}
+        availableTickets={availableTickets}
+        onBuyTickets={() => setShowTicketModal(true)}
       />
 
       <Tabs defaultValue='children' className='w-full'>
         <TabsList className='grid w-full grid-cols-4 gap-1 p-1 bg-muted/50'>
-          <TabsTrigger 
-            value='children' 
+          <TabsTrigger
+            value='children'
             className='text-xs sm:text-sm px-1 sm:px-3 py-2 data-[state=active]:bg-background'
           >
             <span className='hidden xs:inline'>Mis Hijos</span>
             <span className='xs:hidden'>Hijos</span>
           </TabsTrigger>
-          <TabsTrigger 
-            value='classes' 
+          <TabsTrigger
+            value='classes'
             className='text-xs sm:text-sm px-1 sm:px-3 py-2 data-[state=active]:bg-background'
           >
             <span className='hidden xs:inline'>Clases</span>
             <span className='xs:hidden'>Clases</span>
           </TabsTrigger>
-          <TabsTrigger 
-            value='bookings' 
+          <TabsTrigger
+            value='bookings'
             className='text-xs sm:text-sm px-1 sm:px-3 py-2 data-[state=active]:bg-background'
           >
             <span className='hidden xs:inline'>Reservas</span>
             <span className='xs:hidden'>Reservas</span>
           </TabsTrigger>
-          <TabsTrigger 
-            value='posts' 
+          <TabsTrigger
+            value='posts'
             className='text-xs sm:text-sm px-1 sm:px-3 py-2 data-[state=active]:bg-background'
           >
             <span className='hidden xs:inline'>Contenido</span>
@@ -102,7 +103,7 @@ export default function ParentalDashboard() {
 
         <TabsContent value='children' className='space-y-4 mt-4'>
           <ChildrenTab
-            children={children}
+            childrenData={children}
             loading={loading}
             onAddChild={() => setShowAddChildModal(true)}
           />
@@ -111,7 +112,7 @@ export default function ParentalDashboard() {
         <TabsContent value='classes' className='space-y-4 mt-4'>
           <ClassesTab
             classes={upcomingClasses}
-            children={children}
+            childrenData={children}
             onBookClass={openBookingModal}
           />
         </TabsContent>
@@ -142,7 +143,7 @@ export default function ParentalDashboard() {
         onOpenChange={setShowBookingModal}
         selectedClass={selectedClass}
         selectedJuniors={selectedJuniors}
-        children={children}
+        childrenData={children}
         onToggleJunior={toggleJuniorSelection}
         onConfirm={handleConfirmBooking}
         loading={bookingLoading}

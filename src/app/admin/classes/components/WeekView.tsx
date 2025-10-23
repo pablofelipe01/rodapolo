@@ -12,7 +12,12 @@ interface WeekViewProps {
   onViewDetails: (classItem: ClassRow) => void
 }
 
-export function WeekView({ classes, selectedDate, onDateChange, onEdit, onDelete, onViewDetails }: WeekViewProps) {
+export function WeekView({
+  classes,
+  selectedDate,
+  onDateChange,
+  onEdit,
+}: WeekViewProps) {
   const formatDateForDisplay = (dateString: string) => {
     const [year, month, day] = dateString.split('-')
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
@@ -47,7 +52,8 @@ export function WeekView({ classes, selectedDate, onDateChange, onEdit, onDelete
       {/* Header with Week Navigation */}
       <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
         <h2 className='text-lg sm:text-xl font-semibold text-center sm:text-left'>
-          Semana del {formatDateForDisplay(selectedDate.toISOString().split('T')[0])}
+          Semana del{' '}
+          {formatDateForDisplay(selectedDate.toISOString().split('T')[0])}
         </h2>
         <div className='flex items-center justify-center gap-2'>
           <Button
@@ -107,7 +113,9 @@ export function WeekView({ classes, selectedDate, onDateChange, onEdit, onDelete
                     className='text-xs p-2 bg-blue-100 rounded cursor-pointer hover:bg-blue-200 transition-colors'
                     onClick={() => onEdit(classItem)}
                   >
-                    <div className='font-medium truncate'>{classItem.start_time}</div>
+                    <div className='font-medium truncate'>
+                      {classItem.start_time}
+                    </div>
                     <div className='truncate' title={classItem.instructor_name}>
                       {classItem.instructor_name}
                     </div>

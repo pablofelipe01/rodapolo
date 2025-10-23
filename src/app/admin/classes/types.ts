@@ -12,7 +12,7 @@ export type ClassRow = {
   capacity: number
   level: 'alpha' | 'beta' | 'mixed'
   status: 'scheduled' | 'confirmed' | 'cancelled' | 'completed'
-  field?: string | null  
+  field?: string | null
   notes?: string | null
   admin_id: string
   current_bookings: number
@@ -28,7 +28,7 @@ export type FormData = {
   capacity: number
   level: 'alpha' | 'beta' | 'mixed'
   status: 'scheduled' | 'confirmed' | 'cancelled' | 'completed'
-  field?: string | null  
+  field?: string | null
   notes?: string | null
 }
 
@@ -42,7 +42,7 @@ export type SeasonData = {
   instructorName: string
   capacity: number
   level: 'alpha' | 'beta' | 'mixed'
-  field: string  
+  field: string
   notes: string
 }
 

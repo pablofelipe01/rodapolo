@@ -13,7 +13,7 @@ export function AlertMessages({ error, paymentStatus }: AlertMessagesProps) {
           <AlertDescription className='text-red-800'>{error}</AlertDescription>
         </Alert>
       )}
-      
+
       {paymentStatus === 'success' && (
         <Alert className='border-green-200 bg-green-50'>
           <AlertDescription className='text-green-800'>

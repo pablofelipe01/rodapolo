@@ -9,12 +9,36 @@ interface StatsCardsProps {
   onBuyTickets: () => void
 }
 
-export function StatsCards({ stats, availableTickets, onBuyTickets }: StatsCardsProps) {
+export function StatsCards({
+  stats,
+  availableTickets,
+  onBuyTickets,
+}: StatsCardsProps) {
   const cards = [
-    { icon: Baby, label: 'Mis Hijos', value: stats.totalChildren, color: 'bg-blue-500' },
-    { icon: Users, label: 'Activos', value: stats.activeChildren, color: 'bg-green-500' },
-    { icon: Star, label: 'Alpha', value: stats.alphaChildren, color: 'bg-purple-500' },
-    { icon: Trophy, label: 'Beta', value: stats.betaChildren, color: 'bg-orange-500' },
+    {
+      icon: Baby,
+      label: 'Mis Hijos',
+      value: stats.totalChildren,
+      color: 'bg-blue-500',
+    },
+    {
+      icon: Users,
+      label: 'Activos',
+      value: stats.activeChildren,
+      color: 'bg-green-500',
+    },
+    {
+      icon: Star,
+      label: 'Alpha',
+      value: stats.alphaChildren,
+      color: 'bg-purple-500',
+    },
+    {
+      icon: Trophy,
+      label: 'Beta',
+      value: stats.betaChildren,
+      color: 'bg-orange-500',
+    },
   ]
 
   return (
@@ -27,14 +51,18 @@ export function StatsCards({ stats, availableTickets, onBuyTickets }: StatsCards
                 <card.icon className='h-4 w-4 sm:h-6 sm:w-6 text-white' />
               </div>
               <div className='ml-2 sm:ml-3'>
-                <p className='text-xs sm:text-sm font-medium text-gray-600'>{card.label}</p>
-                <p className='text-lg sm:text-2xl font-bold text-gray-900'>{card.value}</p>
+                <p className='text-xs sm:text-sm font-medium text-gray-600'>
+                  {card.label}
+                </p>
+                <p className='text-lg sm:text-2xl font-bold text-gray-900'>
+                  {card.value}
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
       ))}
-      
+
       <Card className='col-span-2 md:col-span-1 overflow-hidden'>
         <CardContent className='p-3 sm:p-4'>
           <div className='flex items-center'>
@@ -42,13 +70,17 @@ export function StatsCards({ stats, availableTickets, onBuyTickets }: StatsCards
               <Ticket className='h-4 w-4 sm:h-6 sm:w-6 text-white' />
             </div>
             <div className='ml-2 sm:ml-3'>
-              <p className='text-xs sm:text-sm font-medium text-gray-600'>Tickets</p>
-              <p className='text-lg sm:text-2xl font-bold text-gray-900'>{availableTickets}</p>
+              <p className='text-xs sm:text-sm font-medium text-gray-600'>
+                Tickets
+              </p>
+              <p className='text-lg sm:text-2xl font-bold text-gray-900'>
+                {availableTickets}
+              </p>
             </div>
           </div>
           <div className='mt-2 sm:mt-3'>
-            <Button 
-              size='sm' 
+            <Button
+              size='sm'
               className='w-full bg-indigo-600 hover:bg-indigo-700 text-xs sm:text-sm'
               onClick={onBuyTickets}
             >

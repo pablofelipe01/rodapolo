@@ -7,7 +7,10 @@ interface ViewNavigationProps {
   onViewChange: (view: CalendarView) => void
 }
 
-export function ViewNavigation({ currentView, onViewChange }: ViewNavigationProps) {
+export function ViewNavigation({
+  currentView,
+  onViewChange,
+}: ViewNavigationProps) {
   return (
     <div className='w-full max-w-full overflow-hidden'>
       <div className='flex gap-2 border-b pb-0'>

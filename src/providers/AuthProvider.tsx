@@ -31,29 +31,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClientSupabase()
   const router = useRouter()
 
-  const fetchProfile = useCallback(async (userId: string) => {
-    try {
-      console.log('🔍 Fetching profile for user:', userId)
+  const fetchProfile = useCallback(
+    async (userId: string) => {
+      try {
+        console.log('🔍 Fetching profile for user:', userId)
 
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single()
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .single()
 
-      if (error) {
-        console.error('❌ Profile fetch error:', error)
+        if (error) {
+          console.error('❌ Profile fetch error:', error)
+          setProfile(null)
+          return
+        }
+
+        setProfile(profile)
+        console.log('✅ Profile loaded successfully')
+      } catch (error) {
+        console.error('❌ Unexpected error:', error)
         setProfile(null)
-        return
       }
-
-      setProfile(profile)
-      console.log('✅ Profile loaded successfully')
-    } catch (error) {
-      console.error('❌ Unexpected error:', error)
-      setProfile(null) 
-    }
-  }, [supabase])
+    },
+    [supabase]
+  )
 
   const refreshProfile = async () => {
     if (user) {
@@ -67,9 +70,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initializeAuth = async () => {
       try {
         setLoading(true)
-        
-        const { data: { session }, error } = await supabase.auth.getSession()
-        
+
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession()
+
         if (!mounted) return
 
         if (error) {
@@ -99,21 +105,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initializeAuth()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return
 
-        setUser(session?.user ?? null)
+      setUser(session?.user ?? null)
 
-        if (session?.user) {
-          await fetchProfile(session.user.id)
-        } else {
-          setProfile(null)
-        }
-
-        setLoading(false)
+      if (session?.user) {
+        await fetchProfile(session.user.id)
+      } else {
+        setProfile(null)
       }
-    )
+
+      setLoading(false)
+    })
 
     return () => {
       mounted = false
@@ -125,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setUser(null)
       setProfile(null)
-      
+
       const { error } = await supabase.auth.signOut()
       if (error) throw error
 
@@ -137,7 +143,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider
+      value={{ user, profile, loading, signOut, refreshProfile }}
+    >
       {children}
     </AuthContext.Provider>
   )

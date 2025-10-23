@@ -38,18 +38,18 @@ export function MobileNav({ currentView, onViewChange }: MobileNavProps) {
   const CurrentIcon = getCurrentIcon()
 
   return (
-    <div className="md:hidden">
+    <div className='md:hidden'>
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="w-full justify-start">
-            <CurrentIcon className="h-4 w-4 mr-2" />
-            <span className="capitalize">
+          <Button variant='outline' size='sm' className='w-full justify-start'>
+            <CurrentIcon className='h-4 w-4 mr-2' />
+            <span className='capitalize'>
               {menuItems.find(item => item.id === currentView)?.label || 'Menú'}
             </span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56">
-          {menuItems.map((item) => {
+        <DropdownMenuContent className='w-56'>
+          {menuItems.map(item => {
             const IconComponent = item.icon
             return (
               <DropdownMenuItem
@@ -59,7 +59,7 @@ export function MobileNav({ currentView, onViewChange }: MobileNavProps) {
                   currentView === item.id ? 'bg-accent' : ''
                 }`}
               >
-                <IconComponent className="h-4 w-4" />
+                <IconComponent className='h-4 w-4' />
                 {item.label}
               </DropdownMenuItem>
             )

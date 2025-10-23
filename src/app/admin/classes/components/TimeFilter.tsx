@@ -30,13 +30,13 @@ export function TimeFilter({ currentFilter, onFilterChange }: TimeFilterProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2">
-          <Calendar className="h-4 w-4" />
+        <Button variant='outline' className='flex items-center gap-2'>
+          <Calendar className='h-4 w-4' />
           <span>{getFilterLabel(currentFilter)}</span>
-          <ChevronDown className="h-4 w-4" />
+          <ChevronDown className='h-4 w-4' />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align='end'>
         <DropdownMenuItem onClick={() => onFilterChange('all')}>
           Todas las clases
         </DropdownMenuItem>
