@@ -29,7 +29,7 @@ export function TicketModal({
       tickets: 5,
       price: '$25.00',
       pricePerTicket: '$5.00 por ticket',
-      description: '5 tickets'
+      description: '5 tickets',
     },
     {
       id: 'popular',
@@ -39,7 +39,7 @@ export function TicketModal({
       pricePerTicket: '$4.50 por ticket',
       description: '10 tickets',
       badge: 'Más vendido',
-      savings: 'Ahorra $5.00'
+      savings: 'Ahorra $5.00',
     },
     {
       id: 'premium',
@@ -49,8 +49,8 @@ export function TicketModal({
       pricePerTicket: '$4.00 por ticket',
       description: '20 tickets',
       badge: 'Mejor valor',
-      savings: 'Ahorra $20.00'
-    }
+      savings: 'Ahorra $20.00',
+    },
   ]
 
   return (
@@ -67,7 +67,9 @@ export function TicketModal({
           <div className='bg-indigo-50 p-4 rounded-lg'>
             <div className='flex items-center justify-between'>
               <div>
-                <p className='font-medium text-indigo-900'>Tickets Disponibles</p>
+                <p className='font-medium text-indigo-900'>
+                  Tickets Disponibles
+                </p>
                 <p className='text-sm text-indigo-600'>
                   Puedes usar estos tickets para reservar clases
                 </p>
@@ -80,9 +82,12 @@ export function TicketModal({
 
           <div className='space-y-3'>
             <h4 className='font-medium'>Paquetes Disponibles</h4>
-            
+
             {packages.map(pkg => (
-              <Card key={pkg.id} className='border-2 hover:border-indigo-200 cursor-pointer transition-colors'>
+              <Card
+                key={pkg.id}
+                className='border-2 hover:border-indigo-200 cursor-pointer transition-colors'
+              >
                 <CardContent className='p-4'>
                   <div className='flex items-center justify-between'>
                     <div>
@@ -96,7 +101,9 @@ export function TicketModal({
                     </div>
                     <div className='text-right'>
                       <p className='text-lg font-bold'>{pkg.price}</p>
-                      <p className='text-xs text-gray-500'>{pkg.pricePerTicket}</p>
+                      <p className='text-xs text-gray-500'>
+                        {pkg.pricePerTicket}
+                      </p>
                       {pkg.savings && (
                         <p className='text-xs text-green-600 font-medium'>
                           {pkg.savings}

@@ -17,7 +17,11 @@ interface SeasonClassFormProps {
   loading: boolean
 }
 
-export function SeasonClassForm({ onSubmit, onCancel, loading }: SeasonClassFormProps) {
+export function SeasonClassForm({
+  onSubmit,
+  onCancel,
+  loading,
+}: SeasonClassFormProps) {
   const [seasonData, setSeasonData] = useState<SeasonData>({
     name: '',
     startDate: '',
@@ -63,7 +67,9 @@ export function SeasonClassForm({ onSubmit, onCancel, loading }: SeasonClassForm
             id='start-date'
             type='date'
             value={seasonData.startDate}
-            onChange={e => setSeasonData({ ...seasonData, startDate: e.target.value })}
+            onChange={e =>
+              setSeasonData({ ...seasonData, startDate: e.target.value })
+            }
           />
         </div>
         <div className='space-y-2'>
@@ -72,7 +78,9 @@ export function SeasonClassForm({ onSubmit, onCancel, loading }: SeasonClassForm
             id='end-date'
             type='date'
             value={seasonData.endDate}
-            onChange={e => setSeasonData({ ...seasonData, endDate: e.target.value })}
+            onChange={e =>
+              setSeasonData({ ...seasonData, endDate: e.target.value })
+            }
           />
         </div>
       </div>
@@ -80,17 +88,21 @@ export function SeasonClassForm({ onSubmit, onCancel, loading }: SeasonClassForm
       <div className='space-y-2'>
         <Label>Días de la Semana</Label>
         <div className='flex gap-2 flex-wrap'>
-          {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day, index) => (
-            <Button
-              key={index}
-              type='button'
-              variant={seasonData.daysOfWeek.includes(index) ? 'default' : 'outline'}
-              className='w-16'
-              onClick={() => toggleDayOfWeek(index)}
-            >
-              {day}
-            </Button>
-          ))}
+          {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(
+            (day, index) => (
+              <Button
+                key={index}
+                type='button'
+                variant={
+                  seasonData.daysOfWeek.includes(index) ? 'default' : 'outline'
+                }
+                className='w-16'
+                onClick={() => toggleDayOfWeek(index)}
+              >
+                {day}
+              </Button>
+            )
+          )}
         </div>
       </div>
 
@@ -101,7 +113,9 @@ export function SeasonClassForm({ onSubmit, onCancel, loading }: SeasonClassForm
             id='season-start-time'
             type='time'
             value={seasonData.startTime}
-            onChange={e => setSeasonData({ ...seasonData, startTime: e.target.value })}
+            onChange={e =>
+              setSeasonData({ ...seasonData, startTime: e.target.value })
+            }
           />
         </div>
         <div className='space-y-2'>
@@ -110,7 +124,9 @@ export function SeasonClassForm({ onSubmit, onCancel, loading }: SeasonClassForm
             id='season-end-time'
             type='time'
             value={seasonData.endTime}
-            onChange={e => setSeasonData({ ...seasonData, endTime: e.target.value })}
+            onChange={e =>
+              setSeasonData({ ...seasonData, endTime: e.target.value })
+            }
           />
         </div>
       </div>
@@ -121,7 +137,9 @@ export function SeasonClassForm({ onSubmit, onCancel, loading }: SeasonClassForm
           <Input
             id='season-instructor'
             value={seasonData.instructorName}
-            onChange={e => setSeasonData({ ...seasonData, instructorName: e.target.value })}
+            onChange={e =>
+              setSeasonData({ ...seasonData, instructorName: e.target.value })
+            }
             placeholder='Nombre del instructor'
           />
         </div>
@@ -133,7 +151,12 @@ export function SeasonClassForm({ onSubmit, onCancel, loading }: SeasonClassForm
             min='1'
             max='20'
             value={seasonData.capacity}
-            onChange={e => setSeasonData({ ...seasonData, capacity: parseInt(e.target.value) })}
+            onChange={e =>
+              setSeasonData({
+                ...seasonData,
+                capacity: parseInt(e.target.value),
+              })
+            }
           />
         </div>
       </div>
@@ -143,7 +166,12 @@ export function SeasonClassForm({ onSubmit, onCancel, loading }: SeasonClassForm
           <Label htmlFor='season-level'>Nivel</Label>
           <Select
             value={seasonData.level}
-            onValueChange={value => setSeasonData({ ...seasonData, level: value as 'alpha' | 'beta' | 'mixed' })}
+            onValueChange={value =>
+              setSeasonData({
+                ...seasonData,
+                level: value as 'alpha' | 'beta' | 'mixed',
+              })
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -159,7 +187,12 @@ export function SeasonClassForm({ onSubmit, onCancel, loading }: SeasonClassForm
           <Label htmlFor='season-field'>Ciudad</Label>
           <Select
             value={seasonData.field}
-            onValueChange={value => setSeasonData({ ...seasonData, field: value as 'sotogrande' | 'marbella' })}
+            onValueChange={value =>
+              setSeasonData({
+                ...seasonData,
+                field: value as 'sotogrande' | 'marbella',
+              })
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -177,7 +210,9 @@ export function SeasonClassForm({ onSubmit, onCancel, loading }: SeasonClassForm
         <Input
           id='season-notes'
           value={seasonData.notes}
-          onChange={e => setSeasonData({ ...seasonData, notes: e.target.value })}
+          onChange={e =>
+            setSeasonData({ ...seasonData, notes: e.target.value })
+          }
           placeholder='Notas adicionales'
         />
       </div>
@@ -186,7 +221,12 @@ export function SeasonClassForm({ onSubmit, onCancel, loading }: SeasonClassForm
         <Button type='submit' disabled={loading}>
           {loading ? 'Creando...' : 'Crear Temporada'}
         </Button>
-        <Button type='button' variant='outline' onClick={onCancel} disabled={loading}>
+        <Button
+          type='button'
+          variant='outline'
+          onClick={onCancel}
+          disabled={loading}
+        >
           Cancelar
         </Button>
       </div>

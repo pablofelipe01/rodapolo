@@ -75,7 +75,9 @@ export function IndividualClassForm({
           <Input
             id='instructor'
             value={formData.instructor_name}
-            onChange={e => setFormData({ ...formData, instructor_name: e.target.value })}
+            onChange={e =>
+              setFormData({ ...formData, instructor_name: e.target.value })
+            }
             placeholder='Nombre del instructor'
             required
           />
@@ -89,7 +91,9 @@ export function IndividualClassForm({
             id='start_time'
             type='time'
             value={formData.start_time}
-            onChange={e => setFormData({ ...formData, start_time: e.target.value })}
+            onChange={e =>
+              setFormData({ ...formData, start_time: e.target.value })
+            }
             required
           />
         </div>
@@ -99,7 +103,9 @@ export function IndividualClassForm({
             id='end_time'
             type='time'
             value={formData.end_time}
-            onChange={e => setFormData({ ...formData, end_time: e.target.value })}
+            onChange={e =>
+              setFormData({ ...formData, end_time: e.target.value })
+            }
             required
           />
         </div>
@@ -111,7 +117,9 @@ export function IndividualClassForm({
             min='1'
             max='50'
             value={formData.capacity}
-            onChange={e => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
+            onChange={e =>
+              setFormData({ ...formData, capacity: parseInt(e.target.value) })
+            }
             required
           />
         </div>
@@ -122,7 +130,12 @@ export function IndividualClassForm({
           <Label htmlFor='level'>Nivel</Label>
           <Select
             value={formData.level}
-            onValueChange={value => setFormData({ ...formData, level: value as 'alpha' | 'beta' | 'mixed' })}
+            onValueChange={value =>
+              setFormData({
+                ...formData,
+                level: value as 'alpha' | 'beta' | 'mixed',
+              })
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -138,10 +151,16 @@ export function IndividualClassForm({
           <Label htmlFor='status'>Estado</Label>
           <Select
             value={formData.status}
-            onValueChange={value => setFormData({ 
-              ...formData, 
-              status: value as 'scheduled' | 'confirmed' | 'cancelled' | 'completed' 
-            })}
+            onValueChange={value =>
+              setFormData({
+                ...formData,
+                status: value as
+                  | 'scheduled'
+                  | 'confirmed'
+                  | 'cancelled'
+                  | 'completed',
+              })
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -158,13 +177,15 @@ export function IndividualClassForm({
           <Label htmlFor='field'>Ciudad</Label>
           <Select
             value={formData.field || ''}
-            onValueChange={value => setFormData({ 
-              ...formData, 
-              field: value as 'sotogrande' | 'marbella' | null 
-            })}
+            onValueChange={value =>
+              setFormData({
+                ...formData,
+                field: value as 'sotogrande' | 'marbella' | null,
+              })
+            }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Selecciona ciudad" />
+              <SelectValue placeholder='Selecciona ciudad' />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value='sotogrande'>Sotogrande</SelectItem>
@@ -179,16 +200,24 @@ export function IndividualClassForm({
         <Input
           id='notes'
           value={formData.notes || ''}
-          onChange={e => setFormData({ ...formData, notes: e.target.value || null })}
+          onChange={e =>
+            setFormData({ ...formData, notes: e.target.value || null })
+          }
           placeholder='Notas adicionales'
         />
       </div>
 
       <div className='flex gap-2'>
         <Button type='submit' disabled={loading}>
-          {loading ? 'Guardando...' : editingClass ? 'Actualizar' : 'Crear'} Clase
+          {loading ? 'Guardando...' : editingClass ? 'Actualizar' : 'Crear'}{' '}
+          Clase
         </Button>
-        <Button type='button' variant='outline' onClick={onCancel} disabled={loading}>
+        <Button
+          type='button'
+          variant='outline'
+          onClick={onCancel}
+          disabled={loading}
+        >
           Cancelar
         </Button>
       </div>

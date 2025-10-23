@@ -1,7 +1,22 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Calendar, Clock, User, BookOpen, Info, ChevronDown, ChevronUp, MapPin, Trash2, Edit } from 'lucide-react'
+import {
+  Calendar,
+  Clock,
+  User,
+  BookOpen,
+  Info,
+  ChevronDown,
+  ChevronUp,
+  MapPin,
+} from 'lucide-react'
 import { Booking, ClassInfo } from './types'
 import { useState } from 'react'
 
@@ -11,7 +26,9 @@ interface BookingsTabProps {
 }
 
 export function BookingsTab({ bookings, classes }: BookingsTabProps) {
-  const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null)
+  const [expandedBookingId, setExpandedBookingId] = useState<string | null>(
+    null
+  )
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming')
 
   const formatDate = (dateString: string) => {
@@ -37,17 +54,28 @@ export function BookingsTab({ bookings, classes }: BookingsTabProps) {
 
   // Separate bookings into upcoming and past
   const now = new Date()
-  const upcomingBookings = bookings.filter(booking => {
-    const bookingDate = new Date(booking.class_date)
-    return bookingDate >= now
-  }).sort((a, b) => new Date(a.class_date).getTime() - new Date(b.class_date).getTime()) // Ascending for upcoming
+  const upcomingBookings = bookings
+    .filter(booking => {
+      const bookingDate = new Date(booking.class_date)
+      return bookingDate >= now
+    })
+    .sort(
+      (a, b) =>
+        new Date(a.class_date).getTime() - new Date(b.class_date).getTime()
+    ) // Ascending for upcoming
 
-  const pastBookings = bookings.filter(booking => {
-    const bookingDate = new Date(booking.class_date)
-    return bookingDate < now
-  }).sort((a, b) => new Date(b.class_date).getTime() - new Date(a.class_date).getTime()) // Descending for past
+  const pastBookings = bookings
+    .filter(booking => {
+      const bookingDate = new Date(booking.class_date)
+      return bookingDate < now
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.class_date).getTime() - new Date(a.class_date).getTime()
+    ) // Descending for past
 
-  const currentBookings = activeTab === 'upcoming' ? upcomingBookings : pastBookings
+  const currentBookings =
+    activeTab === 'upcoming' ? upcomingBookings : pastBookings
 
   // Commented out for now - might need these later
   /*
@@ -89,17 +117,19 @@ export function BookingsTab({ bookings, classes }: BookingsTabProps) {
                   booking.status === 'confirmed'
                     ? 'bg-green-100'
                     : booking.status === 'cancelled'
-                    ? 'bg-red-100'
-                    : 'bg-gray-100'
+                      ? 'bg-red-100'
+                      : 'bg-gray-100'
                 }`}
               >
-                <BookOpen className={`h-5 w-5 sm:h-6 sm:w-6 ${
-                  booking.status === 'confirmed'
-                    ? 'text-green-600'
-                    : booking.status === 'cancelled'
-                    ? 'text-red-600'
-                    : 'text-gray-600'
-                }`} />
+                <BookOpen
+                  className={`h-5 w-5 sm:h-6 sm:w-6 ${
+                    booking.status === 'confirmed'
+                      ? 'text-green-600'
+                      : booking.status === 'cancelled'
+                        ? 'text-red-600'
+                        : 'text-gray-600'
+                  }`}
+                />
               </div>
             </div>
             <div className='flex-1 min-w-0'>
@@ -113,8 +143,8 @@ export function BookingsTab({ bookings, classes }: BookingsTabProps) {
                       booking.status === 'confirmed'
                         ? 'default'
                         : booking.status === 'cancelled'
-                        ? 'destructive'
-                        : 'secondary'
+                          ? 'destructive'
+                          : 'secondary'
                     }
                     className='text-xs'
                   >
@@ -123,7 +153,10 @@ export function BookingsTab({ bookings, classes }: BookingsTabProps) {
                       : booking.status.toUpperCase()}
                   </Badge>
                   {hasNotes && (
-                    <Badge variant='outline' className='text-xs bg-yellow-100 text-yellow-800 border-yellow-200'>
+                    <Badge
+                      variant='outline'
+                      className='text-xs bg-yellow-100 text-yellow-800 border-yellow-200'
+                    >
                       <Info className='h-3 w-3 mr-1' />
                       Notas
                     </Badge>
@@ -137,7 +170,9 @@ export function BookingsTab({ bookings, classes }: BookingsTabProps) {
                 </div>
                 <div className='flex items-center gap-1'>
                   <Calendar className='w-3 h-3' />
-                  <span className='text-xs'>{formatDate(booking.class_date)}</span>
+                  <span className='text-xs'>
+                    {formatDate(booking.class_date)}
+                  </span>
                 </div>
                 <div className='flex items-center gap-1'>
                   <Clock className='w-3 h-3' />
@@ -155,7 +190,7 @@ export function BookingsTab({ bookings, classes }: BookingsTabProps) {
               </div>
             </div>
           </div>
-          
+
           <div className='flex items-center gap-2 self-end sm:self-auto'>
             {/* Action Buttons */}
             <div className='flex gap-2'>
@@ -195,7 +230,7 @@ export function BookingsTab({ bookings, classes }: BookingsTabProps) {
                 </Button>
               )}
             </div>
-            
+
             <Button
               variant='ghost'
               size='sm'
@@ -233,23 +268,45 @@ export function BookingsTab({ bookings, classes }: BookingsTabProps) {
               {/* Booking Details */}
               <div className='grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm'>
                 <div>
-                  <h4 className='font-medium text-gray-900 mb-1'>Información de la Reserva</h4>
+                  <h4 className='font-medium text-gray-900 mb-1'>
+                    Información de la Reserva
+                  </h4>
                   <div className='space-y-1 text-gray-600'>
-                    <p><strong>Instructor:</strong> {booking.instructor_name}</p>
-                    <p><strong>Alumno:</strong> {booking.junior_name}</p>
-                    <p><strong>Estado:</strong> {booking.status === 'confirmed' ? 'Confirmada' : booking.status}</p>
+                    <p>
+                      <strong>Instructor:</strong> {booking.instructor_name}
+                    </p>
+                    <p>
+                      <strong>Alumno:</strong> {booking.junior_name}
+                    </p>
+                    <p>
+                      <strong>Estado:</strong>{' '}
+                      {booking.status === 'confirmed'
+                        ? 'Confirmada'
+                        : booking.status}
+                    </p>
                     {classInfo && (
-                      <p><strong>Nivel:</strong> {classInfo.level.toUpperCase()}</p>
+                      <p>
+                        <strong>Nivel:</strong> {classInfo.level.toUpperCase()}
+                      </p>
                     )}
                   </div>
                 </div>
                 <div>
-                  <h4 className='font-medium text-gray-900 mb-1'>Fecha y Hora</h4>
+                  <h4 className='font-medium text-gray-900 mb-1'>
+                    Fecha y Hora
+                  </h4>
                   <div className='space-y-1 text-gray-600'>
-                    <p><strong>Fecha:</strong> {formatDate(booking.class_date)}</p>
-                    <p><strong>Horario:</strong> {formatTime(booking.start_time)} - {formatTime(booking.end_time)}</p>
+                    <p>
+                      <strong>Fecha:</strong> {formatDate(booking.class_date)}
+                    </p>
+                    <p>
+                      <strong>Horario:</strong> {formatTime(booking.start_time)}{' '}
+                      - {formatTime(booking.end_time)}
+                    </p>
                     {classInfo?.field && (
-                      <p><strong>Ubicación:</strong> {classInfo.field}</p>
+                      <p>
+                        <strong>Ubicación:</strong> {classInfo.field}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -283,16 +340,17 @@ export function BookingsTab({ bookings, classes }: BookingsTabProps) {
           <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
             <div>
               <CardTitle>
-                {activeTab === 'upcoming' ? 'Próximas Reservas' : 'Reservas Pasadas'}
+                {activeTab === 'upcoming'
+                  ? 'Próximas Reservas'
+                  : 'Reservas Pasadas'}
               </CardTitle>
               <CardDescription>
-                {activeTab === 'upcoming' 
+                {activeTab === 'upcoming'
                   ? 'Tus reservas confirmadas y pendientes'
-                  : 'Historial de tus reservas completadas'
-                }
+                  : 'Historial de tus reservas completadas'}
               </CardDescription>
             </div>
-            
+
             {/* Improved Tab Navigation - Better for mobile */}
             <div className='w-full sm:w-auto'>
               <div className='flex space-x-1 bg-gray-100 p-1 rounded-lg w-full sm:w-auto'>
@@ -325,16 +383,14 @@ export function BookingsTab({ bookings, classes }: BookingsTabProps) {
             <div className='text-center py-8'>
               <Calendar className='mx-auto h-12 w-12 text-gray-400' />
               <h3 className='mt-2 text-sm font-medium text-gray-900'>
-                {activeTab === 'upcoming' 
+                {activeTab === 'upcoming'
                   ? 'No hay reservas próximas'
-                  : 'No hay reservas pasadas'
-                }
+                  : 'No hay reservas pasadas'}
               </h3>
               <p className='mt-1 text-sm text-gray-500'>
                 {activeTab === 'upcoming'
                   ? 'Tus próximas reservas aparecerán aquí.'
-                  : 'Tu historial de reservas aparecerá aquí.'
-                }
+                  : 'Tu historial de reservas aparecerá aquí.'}
               </p>
             </div>
           ) : (

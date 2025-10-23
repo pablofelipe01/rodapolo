@@ -1,21 +1,43 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { BookOpen, Calendar, Clock, Users, MapPin, ChevronDown, ChevronUp, Info, Filter } from 'lucide-react'
+import {
+  BookOpen,
+  Calendar,
+  Clock,
+  Users,
+  MapPin,
+  ChevronDown,
+  ChevronUp,
+  Info,
+  Filter,
+} from 'lucide-react'
 import { ClassInfo, JuniorProfile } from './types'
 import { useState } from 'react'
 
 interface ClassesTabProps {
   classes: ClassInfo[]
-  children: JuniorProfile[]
+  childrenData: JuniorProfile[]
   onBookClass: (classInfo: ClassInfo) => void
 }
 
 type LocationFilter = 'all' | 'Sotogrande' | 'Marbella'
 
-export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) {
+export function ClassesTab({
+  classes,
+  childrenData,
+  onBookClass,
+}: ClassesTabProps) {
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all')
-  const [levelFilter, setLevelFilter] = useState<'all' | 'alpha' | 'beta' | 'mixed'>('all')
+  const [levelFilter, setLevelFilter] = useState<
+    'all' | 'alpha' | 'beta' | 'mixed'
+  >('all')
   const [expandedClassId, setExpandedClassId] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(false)
   const [showDesktopFilters, setShowDesktopFilters] = useState(true) // Separate state for desktop
@@ -36,22 +58,24 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
   // Get location color based on admin side colors
   const getLocationColor = (field: string | null) => {
     if (!field) return 'bg-gray-100 text-gray-800 border-gray-200'
-    
+
     const fieldLower = field.toLowerCase()
-    if (fieldLower.includes('marbella')) return 'bg-green-100 text-green-800 border-green-200'
-    if (fieldLower.includes('sotogrande')) return 'bg-blue-100 text-blue-800 border-blue-200'
-    
+    if (fieldLower.includes('marbella'))
+      return 'bg-green-100 text-green-800 border-green-200'
+    if (fieldLower.includes('sotogrande'))
+      return 'bg-blue-100 text-blue-800 border-blue-200'
+
     return 'bg-gray-100 text-gray-800 border-gray-200'
   }
 
   // Get display name for field
   const getLocationDisplayName = (field: string | null) => {
     if (!field) return 'Sin ubicación'
-    
+
     const fieldLower = field.toLowerCase()
     if (fieldLower.includes('marbella')) return 'Marbella'
     if (fieldLower.includes('sotogrande')) return 'Sotogrande'
-    
+
     return field
   }
 
@@ -61,22 +85,24 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
 
   // Filter classes based on selected filters
   const filteredClasses = classes.filter(classInfo => {
-    const locationMatch = locationFilter === 'all' || 
-      (classInfo.field && getLocationDisplayName(classInfo.field) === locationFilter)
-    
+    const locationMatch =
+      locationFilter === 'all' ||
+      (classInfo.field &&
+        getLocationDisplayName(classInfo.field) === locationFilter)
+
     const levelMatch = levelFilter === 'all' || classInfo.level === levelFilter
-    
+
     return locationMatch && levelMatch
   })
 
   // Count classes by location (using the field property with flexible matching)
   const locationCounts = {
     all: classes.length,
-    Sotogrande: classes.filter(c => 
-      c.field && getLocationDisplayName(c.field) === 'Sotogrande'
+    Sotogrande: classes.filter(
+      c => c.field && getLocationDisplayName(c.field) === 'Sotogrande'
     ).length,
-    Marbella: classes.filter(c => 
-      c.field && getLocationDisplayName(c.field) === 'Marbella'
+    Marbella: classes.filter(
+      c => c.field && getLocationDisplayName(c.field) === 'Marbella'
     ).length,
   }
 
@@ -107,7 +133,9 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
       </div>
 
       {/* Filters - Mobile Collapsible, Desktop Toggleable */}
-      <div className={`${showFilters ? 'block' : 'hidden'} ${showDesktopFilters ? 'sm:block' : 'sm:hidden'}`}>
+      <div
+        className={`${showFilters ? 'block' : 'hidden'} ${showDesktopFilters ? 'sm:block' : 'sm:hidden'}`}
+      >
         <Card>
           <CardHeader className='pb-3'>
             <CardTitle className='text-lg flex items-center gap-2'>
@@ -121,12 +149,22 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
           <CardContent className='space-y-4'>
             {/* Location Filter */}
             <div>
-              <label className='text-sm font-medium mb-2 block'>Ubicación</label>
+              <label className='text-sm font-medium mb-2 block'>
+                Ubicación
+              </label>
               <div className='flex flex-wrap gap-2'>
                 {[
                   { value: 'all', label: 'Todas', count: locationCounts.all },
-                  { value: 'Sotogrande', label: 'Sotogrande', count: locationCounts.Sotogrande },
-                  { value: 'Marbella', label: 'Marbella', count: locationCounts.Marbella },
+                  {
+                    value: 'Sotogrande',
+                    label: 'Sotogrande',
+                    count: locationCounts.Sotogrande,
+                  },
+                  {
+                    value: 'Marbella',
+                    label: 'Marbella',
+                    count: locationCounts.Marbella,
+                  },
                 ].map(({ value, label, count }) => (
                   <Button
                     key={value}
@@ -137,7 +175,10 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
                   >
                     <MapPin className='h-3 w-3 flex-shrink-0' />
                     <span className='truncate'>{label}</span>
-                    <Badge variant='secondary' className='ml-1 text-xs flex-shrink-0'>
+                    <Badge
+                      variant='secondary'
+                      className='ml-1 text-xs flex-shrink-0'
+                    >
                       {count}
                     </Badge>
                   </Button>
@@ -163,7 +204,10 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
                     className='flex items-center gap-1 text-xs px-3 py-2 h-auto min-w-[80px] flex-1 sm:flex-initial'
                   >
                     <span className='truncate'>{label}</span>
-                    <Badge variant='secondary' className='ml-1 text-xs flex-shrink-0'>
+                    <Badge
+                      variant='secondary'
+                      className='ml-1 text-xs flex-shrink-0'
+                    >
                       {count}
                     </Badge>
                   </Button>
@@ -175,12 +219,12 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
             {(locationFilter !== 'all' || levelFilter !== 'all') && (
               <div className='flex items-center justify-between pt-2 border-t'>
                 <span className='text-sm text-gray-600'>
-                  Filtros activos: 
+                  Filtros activos:
                   {locationFilter !== 'all' && ` ${locationFilter}`}
                   {levelFilter !== 'all' && ` • ${levelFilter.toUpperCase()}`}
                 </span>
-                <Button 
-                  variant='ghost' 
+                <Button
+                  variant='ghost'
                   size='sm'
                   onClick={() => {
                     setLocationFilter('all')
@@ -236,14 +280,13 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
                 No hay clases programadas
               </h3>
               <p className='text-gray-500 mb-4 max-w-sm mx-auto'>
-                {classes.length === 0 
+                {classes.length === 0
                   ? 'Las clases aparecerán aquí cuando estén disponibles.'
-                  : 'No hay clases que coincidan con los filtros seleccionados.'
-                }
+                  : 'No hay clases que coincidan con los filtros seleccionados.'}
               </p>
               {(locationFilter !== 'all' || levelFilter !== 'all') && (
-                <Button 
-                  variant='outline' 
+                <Button
+                  variant='outline'
                   onClick={() => {
                     setLocationFilter('all')
                     setLevelFilter('all')
@@ -257,8 +300,10 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
             <div className='space-y-3'>
               {filteredClasses.map(classInfo => {
                 const isExpanded = expandedClassId === classInfo.id
-                const hasNotes = classInfo.notes && classInfo.notes.trim().length > 0
-                const hasField = classInfo.field && classInfo.field.trim().length > 0
+                const hasNotes =
+                  classInfo.notes && classInfo.notes.trim().length > 0
+                const hasField =
+                  classInfo.field && classInfo.field.trim().length > 0
 
                 return (
                   <div
@@ -300,16 +345,21 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
                             {/* Location and Notes Badges */}
                             <div className='flex flex-wrap gap-1 mb-3'>
                               {hasField && (
-                                <Badge 
-                                  variant='outline' 
+                                <Badge
+                                  variant='outline'
                                   className={`text-xs ${getLocationColor(classInfo.field)}`}
                                 >
                                   <MapPin className='h-3 w-3 mr-1 flex-shrink-0' />
-                                  <span className='truncate'>{getLocationDisplayName(classInfo.field)}</span>
+                                  <span className='truncate'>
+                                    {getLocationDisplayName(classInfo.field)}
+                                  </span>
                                 </Badge>
                               )}
                               {hasNotes && (
-                                <Badge variant='outline' className='text-xs bg-yellow-100 text-yellow-800 border-yellow-200'>
+                                <Badge
+                                  variant='outline'
+                                  className='text-xs bg-yellow-100 text-yellow-800 border-yellow-200'
+                                >
                                   <Info className='h-3 w-3 mr-1 flex-shrink-0' />
                                   Notas
                                 </Badge>
@@ -320,18 +370,22 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
                             <div className='flex flex-col xs:flex-row xs:items-center gap-2 xs:gap-4 text-sm text-gray-600'>
                               <div className='flex items-center gap-1.5'>
                                 <Calendar className='w-4 h-4 flex-shrink-0' />
-                                <span className='text-sm'>{formatDate(classInfo.date)}</span>
+                                <span className='text-sm'>
+                                  {formatDate(classInfo.date)}
+                                </span>
                               </div>
                               <div className='flex items-center gap-1.5'>
                                 <Clock className='w-4 h-4 flex-shrink-0' />
                                 <span className='text-sm'>
-                                  {formatTime(classInfo.start_time)} - {formatTime(classInfo.end_time)}
+                                  {formatTime(classInfo.start_time)} -{' '}
+                                  {formatTime(classInfo.end_time)}
                                 </span>
                               </div>
                               <div className='flex items-center gap-1.5'>
                                 <Users className='w-4 h-4 flex-shrink-0' />
                                 <span className='text-sm'>
-                                  {classInfo.current_bookings || 0}/{classInfo.capacity}
+                                  {classInfo.current_bookings || 0}/
+                                  {classInfo.capacity}
                                 </span>
                               </div>
                             </div>
@@ -344,10 +398,12 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
                             variant='outline'
                             size='sm'
                             onClick={() => onBookClass(classInfo)}
-                            disabled={children.length === 0}
+                            disabled={childrenData.length === 0}
                             className='flex-1 sm:flex-initial'
                           >
-                            {children.length === 0 ? 'Agregar Hijo Primero' : 'Reservar'}
+                            {childrenData.length === 0
+                              ? 'Agregar Hijo Primero'
+                              : 'Reservar'}
                           </Button>
                           <Button
                             variant='ghost'
@@ -376,7 +432,9 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
                                 <MapPin className='h-4 w-4 text-blue-600' />
                                 Ubicación
                               </h4>
-                              <p className='text-sm text-gray-600 pl-6'>{classInfo.field}</p>
+                              <p className='text-sm text-gray-600 pl-6'>
+                                {classInfo.field}
+                              </p>
                             </div>
                           )}
 
@@ -398,32 +456,48 @@ export function ClassesTab({ classes, children, onBookClass }: ClassesTabProps) 
                           {/* Class Details */}
                           <div className='grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm'>
                             <div className='space-y-2'>
-                              <h4 className='font-medium text-gray-900'>Información de la Clase</h4>
+                              <h4 className='font-medium text-gray-900'>
+                                Información de la Clase
+                              </h4>
                               <div className='space-y-1.5 text-gray-600'>
                                 <p className='flex justify-between'>
                                   <span>Instructor:</span>
-                                  <span className='font-medium'>{classInfo.instructor_name}</span>
+                                  <span className='font-medium'>
+                                    {classInfo.instructor_name}
+                                  </span>
                                 </p>
                                 <p className='flex justify-between'>
                                   <span>Nivel:</span>
-                                  <span className='font-medium'>{classInfo.level.toUpperCase()}</span>
+                                  <span className='font-medium'>
+                                    {classInfo.level.toUpperCase()}
+                                  </span>
                                 </p>
                                 <p className='flex justify-between'>
                                   <span>Capacidad:</span>
-                                  <span className='font-medium'>{classInfo.current_bookings || 0}/{classInfo.capacity}</span>
+                                  <span className='font-medium'>
+                                    {classInfo.current_bookings || 0}/
+                                    {classInfo.capacity}
+                                  </span>
                                 </p>
                               </div>
                             </div>
                             <div className='space-y-2'>
-                              <h4 className='font-medium text-gray-900'>Fecha y Hora</h4>
+                              <h4 className='font-medium text-gray-900'>
+                                Fecha y Hora
+                              </h4>
                               <div className='space-y-1.5 text-gray-600'>
                                 <p className='flex justify-between'>
                                   <span>Fecha:</span>
-                                  <span className='font-medium'>{formatDate(classInfo.date)}</span>
+                                  <span className='font-medium'>
+                                    {formatDate(classInfo.date)}
+                                  </span>
                                 </p>
                                 <p className='flex justify-between'>
                                   <span>Horario:</span>
-                                  <span className='font-medium'>{formatTime(classInfo.start_time)} - {formatTime(classInfo.end_time)}</span>
+                                  <span className='font-medium'>
+                                    {formatTime(classInfo.start_time)} -{' '}
+                                    {formatTime(classInfo.end_time)}
+                                  </span>
                                 </p>
                               </div>
                             </div>

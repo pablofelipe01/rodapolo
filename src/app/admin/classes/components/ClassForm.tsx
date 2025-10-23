@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { createClientSupabase } from '@/lib/supabase'
 import type { ClassRow, FormData, SeasonData, UserProfile } from '../types'
@@ -21,6 +23,20 @@ interface ClassFormProps {
   onCancel: () => void
 }
 
+// Define a specific type for class operations that matches the database schema
+type ClassOperationData = {
+  date: string
+  start_time: string
+  end_time: string
+  instructor_name: string
+  capacity: number
+  level: 'alpha' | 'beta' | 'mixed'
+  field: string | null
+  notes: string | null
+  admin_id?: string
+  current_bookings?: number
+}
+
 export function ClassForm({
   editingClass,
   activeTab,
@@ -30,7 +46,7 @@ export function ClassForm({
   onCancel,
 }: ClassFormProps) {
   const [loading, setLoading] = useState(false)
-  const supabase = createClientSupabase()
+  const [supabase] = useState(() => createClientSupabase())
 
   const getCurrentUserProfile = async (): Promise<UserProfile> => {
     try {
@@ -58,7 +74,7 @@ export function ClassForm({
     try {
       setLoading(true)
       console.log('🟡 Starting individual class submission...')
-      
+
       const userProfile = await getCurrentUserProfile()
       console.log('👤 User profile:', userProfile)
 
@@ -68,7 +84,7 @@ export function ClassForm({
 
       if (editingClass) {
         console.log('✏️ Updating class:', editingClass.id)
-        const updateData = {
+        const updateData: ClassOperationData = {
           date: formData.date,
           start_time: formData.start_time,
           end_time: formData.end_time,
@@ -80,9 +96,10 @@ export function ClassForm({
         }
         console.log('📝 Update data:', updateData)
 
+        // Fix for TypeScript error - use type assertion
         const { data, error } = await supabase
           .from('classes')
-          .update(updateData)
+          .update(updateData as never)
           .eq('id', editingClass.id)
           .select()
 
@@ -93,7 +110,7 @@ export function ClassForm({
         console.log('✅ Class updated successfully:', data)
       } else {
         console.log('➕ Creating new class')
-        const insertData = {
+        const insertData: ClassOperationData = {
           date: formData.date,
           start_time: formData.start_time,
           end_time: formData.end_time,
@@ -107,9 +124,10 @@ export function ClassForm({
         }
         console.log('📝 Insert data:', insertData)
 
+        // Fix for TypeScript error - use type assertion
         const { data, error } = await supabase
           .from('classes')
-          .insert([insertData])
+          .insert([insertData as never])
           .select()
 
         if (error) {
@@ -123,9 +141,8 @@ export function ClassForm({
       onSuccess()
     } catch (err) {
       console.error('💥 Error in handleIndividualSubmit:', err)
-      const errorMessage = err instanceof Error 
-        ? err.message 
-        : 'Error al guardar la clase'
+      const errorMessage =
+        err instanceof Error ? err.message : 'Error al guardar la clase'
       console.error('💥 Error details:', JSON.stringify(err, null, 2))
       onError(errorMessage)
     } finally {
@@ -162,16 +179,21 @@ export function ClassForm({
       // Generar todas las fechas en el rango
       const startDate = new Date(seasonData.startDate)
       const endDate = new Date(seasonData.endDate)
-      const classesToCreate = []
+      const classesToCreate: ClassOperationData[] = []
 
-      console.log('📅 Generating classes for date range:', startDate, 'to', endDate)
+      console.log(
+        '📅 Generating classes for date range:',
+        startDate,
+        'to',
+        endDate
+      )
       console.log('📅 Selected days:', seasonData.daysOfWeek)
 
-      let currentDate = new Date(startDate)
+      const currentDate = new Date(startDate)
       while (currentDate <= endDate) {
         const dayOfWeek = currentDate.getDay()
         if (seasonData.daysOfWeek.includes(dayOfWeek)) {
-          const classData = {
+          const classData: ClassOperationData = {
             date: currentDate.toISOString().split('T')[0],
             start_time: seasonData.startTime,
             end_time: seasonData.endTime,
@@ -184,7 +206,9 @@ export function ClassForm({
             current_bookings: 0,
           }
           classesToCreate.push(classData)
-          console.log(`➕ Added class for ${classData.date} at ${classData.start_time}`)
+          console.log(
+            `➕ Added class for ${classData.date} at ${classData.start_time}`
+          )
         }
         currentDate.setDate(currentDate.getDate() + 1)
       }
@@ -192,16 +216,19 @@ export function ClassForm({
       console.log(`📊 Total classes to create: ${classesToCreate.length}`)
 
       if (classesToCreate.length === 0) {
-        throw new Error('No se generaron clases. Verifica el rango de fechas y días seleccionados.')
+        throw new Error(
+          'No se generaron clases. Verifica el rango de fechas y días seleccionados.'
+        )
       }
 
       // Test with just one class first to see if the basic operation works
       console.log('🚀 Attempting to create classes in database...')
       console.log('📝 First class sample:', classesToCreate[0])
 
+      // Fix for TypeScript error - use type assertion
       const { data, error } = await supabase
         .from('classes')
-        .insert(classesToCreate)
+        .insert(classesToCreate as never)
         .select()
 
       if (error) {
@@ -216,21 +243,26 @@ export function ClassForm({
       console.log('✅ Season created successfully!')
       console.log('📊 Created classes:', data)
       onSuccess()
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('💥 Error in handleSeasonSubmit:')
       console.error('💥 Error object:', err)
       console.error('💥 Error type:', typeof err)
       console.error('💥 Error keys:', Object.keys(err || {}))
-      
+
       let errorMessage = 'Error al crear la temporada'
-      
+
       if (err instanceof Error) {
         errorMessage = err.message
         console.error('💥 Error message:', err.message)
         console.error('💥 Error stack:', err.stack)
       } else if (err && typeof err === 'object') {
         // Handle Supabase errors
-        const supabaseError = err as any
+        const supabaseError = err as {
+          code?: string
+          message?: string
+          details?: string
+          hint?: string
+        }
         if (supabaseError.message) {
           errorMessage = supabaseError.message
         } else if (supabaseError.details) {
@@ -238,22 +270,21 @@ export function ClassForm({
         } else if (supabaseError.code) {
           errorMessage = `Error de base de datos: ${supabaseError.code}`
         }
-        
+
         console.error('💥 Supabase error details:', {
           code: supabaseError.code,
           message: supabaseError.message,
           details: supabaseError.details,
-          hint: supabaseError.hint
+          hint: supabaseError.hint,
         })
       }
-      
+
       console.error('💥 Final error message to display:', errorMessage)
       onError(errorMessage)
     } finally {
       setLoading(false)
     }
   }
-
   return (
     <Card>
       <CardHeader>

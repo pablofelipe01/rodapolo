@@ -2,7 +2,11 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClientSupabase } from '@/lib/supabase'
-import type { ClassRow, TimeFilter, CityFilter as CityFilterType } from './types'
+import type {
+  ClassRow,
+  TimeFilter,
+  CityFilter as CityFilterType,
+} from './types'
 import { ViewNavigation } from './components/ViewNavigation'
 import { AlertMessage } from './components/AlertMessage'
 import { ClassListView } from './components/ClassListView'
@@ -10,7 +14,7 @@ import { DayView } from './components/DayView'
 import { WeekView } from './components/WeekView'
 import { MonthView } from './components/MonthView'
 import { ClassForm } from './components/ClassForm'
-import { TimeFilter } from './components/TimeFilter'
+import { TimeFilter as TimeFilterComponent } from './components/TimeFilter'
 import { CityFilter } from './components/CityFilter'
 import { Button } from '@/components/ui/button'
 import { Plus, Calendar, Filter, X } from 'lucide-react'
@@ -23,9 +27,13 @@ export default function ClassesPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingClass, setEditingClass] = useState<ClassRow | null>(null)
-  const [currentView, setCurrentView] = useState<'list' | 'day' | 'week' | 'month'>('list')
+  const [currentView, setCurrentView] = useState<
+    'list' | 'day' | 'week' | 'month'
+  >('list')
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [activeTab, setActiveTab] = useState<'individual' | 'season'>('individual')
+  const [activeTab, setActiveTab] = useState<'individual' | 'season'>(
+    'individual'
+  )
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('upcoming')
   const [cityFilter, setCityFilter] = useState<CityFilterType>('all')
   const [showFilters, setShowFilters] = useState(false)
@@ -36,7 +44,7 @@ export default function ClassesPage() {
   // Filter classes based on time and city filters
   const filteredClasses = useMemo(() => {
     const today = new Date().toISOString().split('T')[0] // Get today's date in YYYY-MM-DD format
-    
+
     return classes.filter(classItem => {
       // Time filter - Show all classes from today onwards for "upcoming"
       let timeMatch = true
@@ -51,7 +59,7 @@ export default function ClassesPage() {
         default:
           timeMatch = true
       }
-      
+
       // City filter (using field column)
       let cityMatch = true
       switch (cityFilter) {
@@ -65,7 +73,7 @@ export default function ClassesPage() {
         default:
           cityMatch = true
       }
-      
+
       return timeMatch && cityMatch
     })
   }, [classes, timeFilter, cityFilter])
@@ -135,7 +143,11 @@ export default function ClassesPage() {
   }
 
   const handleFormSuccess = () => {
-    setSuccess(editingClass ? 'Clase actualizada exitosamente' : 'Clase creada exitosamente')
+    setSuccess(
+      editingClass
+        ? 'Clase actualizada exitosamente'
+        : 'Clase creada exitosamente'
+    )
     resetForm()
     fetchClasses()
   }
@@ -145,44 +157,56 @@ export default function ClassesPage() {
     const today = new Date().toISOString().split('T')[0]
     const upcomingCount = classes.filter(cls => cls.date >= today).length
     const pastCount = classes.filter(cls => cls.date < today).length
-    const sotograndeCount = classes.filter(cls => cls.field === 'sotogrande').length
+    const sotograndeCount = classes.filter(
+      cls => cls.field === 'sotogrande'
+    ).length
     const marbellaCount = classes.filter(cls => cls.field === 'marbella').length
     const noCityCount = classes.filter(cls => !cls.field).length
-    
+
     return {
       upcoming: upcomingCount,
       past: pastCount,
       all: classes.length,
       sotogrande: sotograndeCount,
       marbella: marbellaCount,
-      noCity: noCityCount
+      noCity: noCityCount,
     }
   }, [classes])
 
-  if (loading) return <div className="flex justify-center items-center min-h-64 p-4">Cargando clases...</div>
+  if (loading)
+    return (
+      <div className='flex justify-center items-center min-h-64 p-4'>
+        Cargando clases...
+      </div>
+    )
 
   return (
     <div className='space-y-4 sm:space-y-6 px-2 sm:px-4 lg:px-0'>
       {/* Header Section */}
       <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4'>
         <div className='text-center sm:text-left'>
-          <h1 className='text-2xl sm:text-3xl font-bold tracking-tight'>Gestión de Clases</h1>
+          <h1 className='text-2xl sm:text-3xl font-bold tracking-tight'>
+            Gestión de Clases
+          </h1>
           <p className='text-muted-foreground text-sm sm:text-base mt-1'>
             Administra horarios, cupos y programación de clases
           </p>
         </div>
-        
+
         {/* Desktop Actions */}
         <div className='hidden sm:flex items-center gap-3'>
-          <TimeFilter 
-            currentFilter={timeFilter} 
-            onFilterChange={setTimeFilter} 
+          <TimeFilterComponent
+            currentFilter={timeFilter}
+            onFilterChange={setTimeFilter}
           />
-          <CityFilter 
-            currentFilter={cityFilter} 
-            onFilterChange={setCityFilter} 
+          <CityFilter
+            currentFilter={cityFilter}
+            onFilterChange={setCityFilter}
           />
-          <Button onClick={() => setShowForm(true)} className='whitespace-nowrap'>
+          <Button
+            onClick={() => setShowForm(true)}
+            className='whitespace-nowrap'
+          >
             <Plus className='mr-2 h-4 w-4' />
             Nueva Clase
           </Button>
@@ -200,8 +224,8 @@ export default function ClassesPage() {
             Filtros
             {showFilters ? <X className='h-4 w-4' /> : null}
           </Button>
-          <Button 
-            onClick={() => setShowForm(true)} 
+          <Button
+            onClick={() => setShowForm(true)}
             size='sm'
             className='flex items-center gap-1 whitespace-nowrap flex-shrink-0'
           >
@@ -216,16 +240,16 @@ export default function ClassesPage() {
         <div className='sm:hidden bg-muted/30 p-4 rounded-lg space-y-4'>
           <div className='space-y-3'>
             <h3 className='font-medium text-sm'>Filtro de Tiempo</h3>
-            <TimeFilter 
-              currentFilter={timeFilter} 
-              onFilterChange={setTimeFilter} 
+            <TimeFilterComponent
+              currentFilter={timeFilter}
+              onFilterChange={setTimeFilter}
             />
           </div>
           <div className='space-y-3'>
             <h3 className='font-medium text-sm'>Filtro de Ciudad</h3>
-            <CityFilter 
-              currentFilter={cityFilter} 
-              onFilterChange={setCityFilter} 
+            <CityFilter
+              currentFilter={cityFilter}
+              onFilterChange={setCityFilter}
             />
           </div>
         </div>
@@ -233,13 +257,25 @@ export default function ClassesPage() {
 
       {/* Filter Stats */}
       <div className='flex flex-wrap gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground justify-center sm:justify-start'>
-        <span className='bg-muted px-2 py-1 rounded'>Total: {getFilterStats.all}</span>
-        <span className='bg-green-100 text-green-800 px-2 py-1 rounded'>Próximas: {getFilterStats.upcoming}</span>
-        <span className='bg-gray-100 text-gray-800 px-2 py-1 rounded'>Pasadas: {getFilterStats.past}</span>
-        <span className='bg-blue-100 text-blue-800 px-2 py-1 rounded'>Sotogrande: {getFilterStats.sotogrande}</span>
-        <span className='bg-green-100 text-green-800 px-2 py-1 rounded'>Marbella: {getFilterStats.marbella}</span>
+        <span className='bg-muted px-2 py-1 rounded'>
+          Total: {getFilterStats.all}
+        </span>
+        <span className='bg-green-100 text-green-800 px-2 py-1 rounded'>
+          Próximas: {getFilterStats.upcoming}
+        </span>
+        <span className='bg-gray-100 text-gray-800 px-2 py-1 rounded'>
+          Pasadas: {getFilterStats.past}
+        </span>
+        <span className='bg-blue-100 text-blue-800 px-2 py-1 rounded'>
+          Sotogrande: {getFilterStats.sotogrande}
+        </span>
+        <span className='bg-green-100 text-green-800 px-2 py-1 rounded'>
+          Marbella: {getFilterStats.marbella}
+        </span>
         {getFilterStats.noCity > 0 && (
-          <span className='bg-yellow-100 text-yellow-800 px-2 py-1 rounded'>Sin ciudad: {getFilterStats.noCity}</span>
+          <span className='bg-yellow-100 text-yellow-800 px-2 py-1 rounded'>
+            Sin ciudad: {getFilterStats.noCity}
+          </span>
         )}
         <span className='bg-primary/10 text-primary px-2 py-1 rounded font-medium'>
           Mostrando: {filteredClasses.length}
@@ -248,12 +284,15 @@ export default function ClassesPage() {
 
       {/* View Navigation */}
       <div className='w-full'>
-        <ViewNavigation currentView={currentView} onViewChange={setCurrentView} />
+        <ViewNavigation
+          currentView={currentView}
+          onViewChange={setCurrentView}
+        />
       </div>
 
       {/* Alerts */}
-      {error && <AlertMessage type="error" message={error} />}
-      {success && <AlertMessage type="success" message={success} />}
+      {error && <AlertMessage type='error' message={error} />}
+      {success && <AlertMessage type='success' message={success} />}
 
       {/* Class Form */}
       {showForm && (
@@ -318,12 +357,12 @@ export default function ClassesPage() {
               No hay clases que coincidan con los filtros
             </h3>
             <p className='text-gray-500 text-sm mb-4'>
-              {timeFilter === 'upcoming' && cityFilter === 'all' 
-                ? 'No hay clases próximas programadas.' 
+              {timeFilter === 'upcoming' && cityFilter === 'all'
+                ? 'No hay clases próximas programadas.'
                 : `Filtros activos: ${timeFilter === 'upcoming' ? 'Próximas' : timeFilter === 'past' ? 'Pasadas' : 'Todas'} • ${cityFilter === 'sotogrande' ? 'Sotogrande' : cityFilter === 'marbella' ? 'Marbella' : 'Todas las ciudades'}`}
             </p>
-            <Button 
-              variant='outline' 
+            <Button
+              variant='outline'
               size='sm'
               onClick={() => {
                 setTimeFilter('all')

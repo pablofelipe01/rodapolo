@@ -1,16 +1,26 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Baby, User, Star, Calendar, Plus } from 'lucide-react'
 import { JuniorProfile } from './types'
 
 interface ChildrenTabProps {
-  children: JuniorProfile[]
+  childrenData: JuniorProfile[]
   loading: boolean
   onAddChild: () => void
 }
 
-export function ChildrenTab({ children, loading, onAddChild }: ChildrenTabProps) {
+export function ChildrenTab({
+  childrenData,
+  loading,
+  onAddChild,
+}: ChildrenTabProps) {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return ''
     return new Date(dateString).toLocaleDateString('es-ES')
@@ -38,7 +48,7 @@ export function ChildrenTab({ children, loading, onAddChild }: ChildrenTabProps)
             <div className='text-center py-8'>
               <div className='text-sm text-gray-500'>Cargando perfiles...</div>
             </div>
-          ) : children.length === 0 ? (
+          ) : childrenData.length === 0 ? (
             <div className='text-center py-8'>
               <Baby className='mx-auto h-12 w-12 text-gray-400' />
               <h3 className='mt-2 text-sm font-medium text-gray-900'>
@@ -50,7 +60,7 @@ export function ChildrenTab({ children, loading, onAddChild }: ChildrenTabProps)
             </div>
           ) : (
             <div className='space-y-4'>
-              {children.map(child => (
+              {childrenData.map(child => (
                 <div
                   key={child.id}
                   className='flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-gray-50 gap-3'
@@ -74,10 +84,18 @@ export function ChildrenTab({ children, loading, onAddChild }: ChildrenTabProps)
                           </span>
                         )}
                         <div className='flex flex-wrap gap-1'>
-                          <Badge variant={child.level === 'alpha' ? 'default' : 'secondary'} className='text-xs'>
+                          <Badge
+                            variant={
+                              child.level === 'alpha' ? 'default' : 'secondary'
+                            }
+                            className='text-xs'
+                          >
                             {child.level.toUpperCase()}
                           </Badge>
-                          <Badge variant={child.active ? 'default' : 'destructive'} className='text-xs'>
+                          <Badge
+                            variant={child.active ? 'default' : 'destructive'}
+                            className='text-xs'
+                          >
                             {child.active ? 'Activo' : 'Inactivo'}
                           </Badge>
                         </div>

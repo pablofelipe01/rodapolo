@@ -13,7 +13,14 @@ interface DayViewProps {
   onViewDetails: (classItem: ClassRow) => void
 }
 
-export function DayView({ classes, selectedDate, onDateChange, onEdit, onDelete, onViewDetails }: DayViewProps) {
+export function DayView({
+  classes,
+  selectedDate,
+  onDateChange,
+  onEdit,
+  onDelete,
+  onViewDetails,
+}: DayViewProps) {
   const formatDateForDisplay = (dateString: string) => {
     const [year, month, day] = dateString.split('-')
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
@@ -51,7 +58,9 @@ export function DayView({ classes, selectedDate, onDateChange, onEdit, onDelete,
             className='flex items-center justify-center gap-1 px-2 sm:px-3 flex-1 min-w-0 max-w-28'
           >
             <ChevronLeft className='h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0' />
-            <span className='hidden xs:inline text-xs sm:text-sm truncate'>Anterior</span>
+            <span className='hidden xs:inline text-xs sm:text-sm truncate'>
+              Anterior
+            </span>
           </Button>
           <Button
             variant='outline'
@@ -71,7 +80,9 @@ export function DayView({ classes, selectedDate, onDateChange, onEdit, onDelete,
             }}
             className='flex items-center justify-center gap-1 px-2 sm:px-3 flex-1 min-w-0 max-w-28'
           >
-            <span className='hidden xs:inline text-xs sm:text-sm truncate'>Siguiente</span>
+            <span className='hidden xs:inline text-xs sm:text-sm truncate'>
+              Siguiente
+            </span>
             <ChevronRight className='h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0' />
           </Button>
         </div>
@@ -80,7 +91,7 @@ export function DayView({ classes, selectedDate, onDateChange, onEdit, onDelete,
       {/* Classes List */}
       <div className='space-y-3 w-full max-w-full'>
         {dayClasses.length === 0 ? (
-          <Card className="w-full max-w-full">
+          <Card className='w-full max-w-full'>
             <CardContent className='pt-6'>
               <div className='text-center text-gray-500 py-4'>
                 No hay clases programadas para este día

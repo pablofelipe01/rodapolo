@@ -126,10 +126,7 @@ export function Navigation() {
             </Link>
             <div className='flex items-center space-x-4'>
               <span className='text-sm'>{user.email}</span>
-              <Button
-                variant='outline'
-                onClick={handleSignOut}
-              >
+              <Button variant='outline' onClick={handleSignOut}>
                 <LogOut className='mr-2 h-4 w-4' />
                 Salir
               </Button>
@@ -148,13 +145,13 @@ export function Navigation() {
       {isMobileMenuOpen && (
         <div className='fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-300' />
       )}
-      
+
       <nav className='border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50'>
         <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
           <div className='flex h-16 items-center justify-between'>
             <div className='flex items-center space-x-8'>
-              <Link 
-                href='/' 
+              <Link
+                href='/'
                 className='flex items-center space-x-2'
                 onClick={() => setIsMobileMenuOpen(false)}
               >
@@ -167,7 +164,7 @@ export function Navigation() {
                 />
                 <span className='text-xl font-bold'>Rodapolo</span>
               </Link>
-              
+
               {/* Desktop Navigation */}
               <div className='hidden md:flex items-center space-x-6'>
                 {navigationItems.map(item => (
@@ -193,10 +190,7 @@ export function Navigation() {
                 </Avatar>
                 <span className='text-sm font-medium'>{profile.full_name}</span>
               </div>
-              <Button
-                variant='outline'
-                onClick={handleSignOut}
-              >
+              <Button variant='outline' onClick={handleSignOut}>
                 <LogOut className='mr-2 h-4 w-4' />
                 Salir
               </Button>
@@ -231,15 +225,18 @@ export function Navigation() {
           </div>
 
           {/* Mobile Menu Popup */}
-          <div className={`
+          <div
+            className={`
             md:hidden mobile-menu-container fixed top-16 left-4 right-4 
             bg-white rounded-lg shadow-2xl border border-gray-200 
             transform transition-all duration-300 ease-in-out z-50
-            ${isMobileMenuOpen 
-              ? 'opacity-100 scale-100 translate-y-0' 
-              : 'opacity-0 scale-95 -translate-y-4 pointer-events-none'
+            ${
+              isMobileMenuOpen
+                ? 'opacity-100 scale-100 translate-y-0'
+                : 'opacity-0 scale-95 -translate-y-4 pointer-events-none'
             }
-          `}>
+          `}
+          >
             <div className='p-4 space-y-3'>
               {/* User Info Header */}
               <div className='flex items-center space-x-3 pb-3 border-b border-gray-100'>
@@ -253,9 +250,7 @@ export function Navigation() {
                   <p className='text-sm font-semibold text-gray-900 truncate'>
                     {profile.full_name}
                   </p>
-                  <p className='text-xs text-gray-500 truncate'>
-                    {user.email}
-                  </p>
+                  <p className='text-xs text-gray-500 truncate'>{user.email}</p>
                 </div>
               </div>
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const { execSync } = require('child_process')
-const fs = require('fs')
+import { execSync } from 'child_process'
+import fs from 'fs'
 
 console.log('🔍 DIAGNÓSTICO COMPLETO DEL PROYECTO\n')
 
@@ -34,10 +34,11 @@ function analyzeTypeScriptErrors() {
   console.log('━'.repeat(50))
 
   try {
-    const result = execSync('npx tsc --noEmit', {
+    const _result = execSync('npx tsc --noEmit', {
       encoding: 'utf-8',
       stdio: 'pipe',
     })
+    console.log('✅ No hay errores de TypeScript')
     console.log('✅ No hay errores de TypeScript')
   } catch (error) {
     const errorOutput = error.stdout || error.stderr || ''
@@ -84,7 +85,7 @@ function checkDependencies() {
 
     // Verificar si hay dependencias faltantes
     runCommand('npm ls --depth=0', 'Verificando integridad de dependencias')
-  } catch (error) {
+  } catch {
     console.log('❌ Error leyendo package.json')
   }
 }

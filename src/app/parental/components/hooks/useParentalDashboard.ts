@@ -4,7 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/providers/AuthProvider'
 import { createClientSupabase } from '@/lib/supabase'
 import { getStripe } from '@/lib/stripe'
-import { JuniorProfile, ClassInfo, Booking, NewChildForm, DashboardStats } from '../types'
+import {
+  JuniorProfile,
+  ClassInfo,
+  Booking,
+  NewChildForm,
+  DashboardStats,
+} from '../types'
 
 export function useParentalDashboard() {
   const { user, profile } = useAuth()
@@ -66,27 +72,27 @@ export function useParentalDashboard() {
     }
   }, [supabase])
 
-const fetchBookings = useCallback(async () => {
-  if (!profile?.id) return
-  try {
-    // Use the simple_bookings_view that worked before
-    const { data, error } = await supabase
-      .from('simple_bookings_view')
-      .select('*')
-      .eq('parental_id', profile.id)
-      .order('class_date', { ascending: true })
-    
-    if (error) {
-      console.error('Error fetching bookings:', error)
+  const fetchBookings = useCallback(async () => {
+    if (!profile?.id) return
+    try {
+      // Use the simple_bookings_view that worked before
+      const { data, error } = await supabase
+        .from('simple_bookings_view')
+        .select('*')
+        .eq('parental_id', profile.id)
+        .order('class_date', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching bookings:', error)
+        setBookings([])
+      } else {
+        setBookings(data || [])
+      }
+    } catch (err) {
+      console.error('Error fetching bookings:', err)
       setBookings([])
-    } else {
-      setBookings(data || [])
     }
-  } catch (err) {
-    console.error('Error fetching bookings:', err)
-    setBookings([])
-  }
-}, [profile?.id, supabase])
+  }, [profile?.id, supabase])
 
   const fetchAvailableTickets = useCallback(async () => {
     if (!profile?.id) return
@@ -100,14 +106,25 @@ const fetchBookings = useCallback(async () => {
         setAvailableTickets(0)
         return
       }
-      const purchaseIds = purchases.map(p => p.id)
-      const { data: tickets, error: ticketsError } = await supabase
+      const purchaseIds = (purchases as { id: string }[]).map(p => p.id)
+      const {
+        data: tickets,
+        error: ticketsError,
+        count,
+      } = await supabase
         .from('ticket_units')
         .select('*', { count: 'exact' })
         .in('purchase_id', purchaseIds)
         .eq('status', 'available')
       if (ticketsError) throw ticketsError
-      setAvailableTickets(tickets?.length || 0)
+      // Prefer the exact count returned by Supabase, otherwise fall back to array length
+      const available =
+        typeof count === 'number'
+          ? count
+          : Array.isArray(tickets)
+            ? (tickets as any[]).length
+            : 0
+      setAvailableTickets(available)
     } catch (err) {
       console.error('Error fetching tickets:', err)
       setAvailableTickets(0)
@@ -115,11 +132,17 @@ const fetchBookings = useCallback(async () => {
   }, [profile?.id, supabase])
 
   // Check if a child already has a booking for the selected class
-  const hasExistingBooking = useCallback((juniorId: string, classId: string) => {
-    return bookings.some(booking => 
-      booking.junior_id === juniorId && booking.class_id === classId && booking.status === 'confirmed'
-    )
-  }, [bookings])
+  const hasExistingBooking = useCallback(
+    (juniorId: string, classId: string) => {
+      return bookings.some(
+        booking =>
+          booking.junior_id === juniorId &&
+          booking.class_id === classId &&
+          booking.status === 'confirmed'
+      )
+    },
+    [bookings]
+  )
 
   const createBooking = async (classId: string, juniorIds: string[]) => {
     if (!profile?.id || juniorIds.length === 0) return
@@ -139,13 +162,20 @@ const fetchBookings = useCallback(async () => {
             continue
           }
 
-          const { data, error } = await supabase.rpc('create_reservation_final', {
-            p_junior_id: juniorId,
-            p_class_id: classId,
-          })
+          const rpcRes = await (supabase as any).rpc(
+            'create_reservation_final',
+            { p_junior_id: juniorId, p_class_id: classId }
+          )
+          const data = rpcRes.data as {
+            success?: boolean
+            error?: string
+          } | null
+          const error = rpcRes.error as any
 
           if (data && data.success === false) {
-            errors.push(`Error para ${juniorId}: ${data.error}`)
+            errors.push(
+              `Error para ${juniorId}: ${data.error ?? 'Error desconocido'}`
+            )
             continue
           }
 
@@ -156,7 +186,8 @@ const fetchBookings = useCallback(async () => {
 
           successCount.push(juniorId)
         } catch (err: unknown) {
-          const errorMessage = err instanceof Error ? err.message : 'Error desconocido'
+          const errorMessage =
+            err instanceof Error ? err.message : 'Error desconocido'
           errors.push(`Error para ${juniorId}: ${errorMessage}`)
         }
       }
@@ -165,7 +196,7 @@ const fetchBookings = useCallback(async () => {
       await Promise.all([
         fetchBookings(),
         fetchUpcomingClasses(),
-        fetchAvailableTickets() // Refresh tickets count after booking
+        fetchAvailableTickets(), // Refresh tickets count after booking
       ])
 
       setError(null)
@@ -175,14 +206,21 @@ const fetchBookings = useCallback(async () => {
 
       // Show success message
       if (successCount.length === juniorIds.length) {
-        alert(`¡${successCount.length} reserva(s) creada(s) exitosamente! Se utilizaron ${successCount.length} tickets.`)
+        alert(
+          `¡${successCount.length} reserva(s) creada(s) exitosamente! Se utilizaron ${successCount.length} tickets.`
+        )
       } else if (successCount.length > 0) {
-        alert(`${successCount.length} de ${juniorIds.length} reservas creadas exitosamente. Se utilizaron ${successCount.length} tickets.`)
+        alert(
+          `${successCount.length} de ${juniorIds.length} reservas creadas exitosamente. Se utilizaron ${successCount.length} tickets.`
+        )
       } else {
-        throw new Error('No se pudo crear ninguna reserva: ' + errors.join(', '))
+        throw new Error(
+          'No se pudo crear ninguna reserva: ' + errors.join(', ')
+        )
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Error al crear las reservas'
+      const errorMessage =
+        err instanceof Error ? err.message : 'Error al crear las reservas'
       setError(errorMessage)
     } finally {
       setBookingLoading(false)
@@ -193,7 +231,10 @@ const fetchBookings = useCallback(async () => {
     if (!profile?.id || !newChildForm.full_name) return
     try {
       setLoading(true)
-      const randomCode = Math.random().toString(36).substring(2, 9).toUpperCase()
+      const randomCode = Math.random()
+        .toString(36)
+        .substring(2, 9)
+        .toUpperCase()
       const uniqueCode = randomCode.padEnd(7, '0')
       const { error } = await supabase
         .from('junior_profiles')
@@ -205,12 +246,17 @@ const fetchBookings = useCallback(async () => {
           birth_date: newChildForm.birth_date || null,
           level: newChildForm.level,
           active: true,
-        })
+        } as any)
         .select()
         .single()
       if (error) throw error
       await fetchChildren()
-      setNewChildForm({ full_name: '', nickname: '', birth_date: '', level: 'alpha' })
+      setNewChildForm({
+        full_name: '',
+        nickname: '',
+        birth_date: '',
+        level: 'alpha',
+      })
       setShowAddChildModal(false)
       alert('¡Hijo agregado exitosamente!')
     } catch (err) {
@@ -230,10 +276,13 @@ const fetchBookings = useCallback(async () => {
         body: JSON.stringify({ packageType, parentalId: profile.id }),
       })
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Error al crear sesión de pago')
+      if (!response.ok)
+        throw new Error(data.error || 'Error al crear sesión de pago')
       const stripe = await getStripe()
       if (!stripe) throw new Error('Stripe no está disponible')
-      const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId })
+      const { error } = await stripe.redirectToCheckout({
+        sessionId: data.sessionId,
+      })
       if (error) throw new Error(error.message)
     } catch (err) {
       console.error('Error purchasing tickets:', err)
@@ -242,8 +291,10 @@ const fetchBookings = useCallback(async () => {
   }
 
   const toggleJuniorSelection = (juniorId: string) => {
-    setSelectedJuniors(prev => 
-      prev.includes(juniorId) ? prev.filter(id => id !== juniorId) : [...prev, juniorId]
+    setSelectedJuniors(prev =>
+      prev.includes(juniorId)
+        ? prev.filter(id => id !== juniorId)
+        : [...prev, juniorId]
     )
   }
 
@@ -265,7 +316,13 @@ const fetchBookings = useCallback(async () => {
       fetchBookings()
       fetchAvailableTickets()
     }
-  }, [profile, fetchChildren, fetchUpcomingClasses, fetchBookings, fetchAvailableTickets])
+  }, [
+    profile,
+    fetchChildren,
+    fetchUpcomingClasses,
+    fetchBookings,
+    fetchAvailableTickets,
+  ])
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
@@ -283,7 +340,9 @@ const fetchBookings = useCallback(async () => {
   const getStats = (): DashboardStats => {
     const totalChildren = children.length
     const activeChildren = children.filter(child => child.active).length
-    const alphaChildren = children.filter(child => child.level === 'alpha').length
+    const alphaChildren = children.filter(
+      child => child.level === 'alpha'
+    ).length
     const betaChildren = children.filter(child => child.level === 'beta').length
     return { totalChildren, activeChildren, alphaChildren, betaChildren }
   }
@@ -307,7 +366,7 @@ const fetchBookings = useCallback(async () => {
     showTicketModal,
     paymentStatus,
     stats: getStats(),
-    
+
     // Actions
     setError,
     setShowBookingModal,
@@ -316,7 +375,7 @@ const fetchBookings = useCallback(async () => {
     setShowAddChildModal,
     setNewChildForm,
     setShowTicketModal,
-    
+
     // Functions
     createBooking,
     createChild,
@@ -326,6 +385,6 @@ const fetchBookings = useCallback(async () => {
     handleConfirmBooking,
     fetchChildren,
     fetchAvailableTickets,
-    hasExistingBooking, 
+    hasExistingBooking,
   }
 }
