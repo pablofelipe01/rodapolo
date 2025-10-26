@@ -100,7 +100,9 @@ export default function JuniorDashboard() {
       // Obtener la información de las clases
       const { data: classesData, error: classesError } = await supabase
         .from('classes')
-        .select('id, date, start_time, end_time, instructor_name, level, notes, field')
+        .select(
+          `id, date, start_time, end_time, instructor_name, level, notes, field`
+        )
         .in('id', classIds)
 
       if (classesError) {
@@ -571,7 +573,9 @@ export default function JuniorDashboard() {
                 <div className='bg-yellow-50 border border-yellow-200 rounded-lg p-3'>
                   <div className='flex items-center gap-2 mb-2'>
                     <MessageSquare className='h-4 w-4 text-yellow-600' />
-                    <h4 className='font-semibold text-yellow-800'>Notas Importantes</h4>
+                    <h4 className='font-semibold text-yellow-800'>
+                      <div className='text-center'>Notas Importantes</div>
+                    </h4>
                   </div>
                   <p className='text-sm text-yellow-700'>
                     {selectedClass.classes.notes}
