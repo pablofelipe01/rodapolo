@@ -22,6 +22,8 @@ import {
   BookOpen,
   Target,
   Award,
+  MessageSquare,
+  MapPin,
 } from 'lucide-react'
 import { createClientSupabase } from '@/lib/supabase'
 import { useJuniorAuth } from '@/providers/JuniorAuthProvider'
@@ -39,6 +41,8 @@ interface BookingWithClass {
     end_time: string
     instructor_name: string
     level: string
+    notes: string | null
+    field: string | null
   }
 }
 
@@ -96,7 +100,9 @@ export default function JuniorDashboard() {
       // Obtener la información de las clases
       const { data: classesData, error: classesError } = await supabase
         .from('classes')
-        .select('id, date, start_time, end_time, instructor_name, level')
+        .select(
+          `id, date, start_time, end_time, instructor_name, level, notes, field`
+        )
         .in('id', classIds)
 
       if (classesError) {
@@ -432,6 +438,17 @@ export default function JuniorDashboard() {
                             {booking.status === 'cancelled' && '✗ Cancelada'}
                           </Badge>
                         </div>
+
+                        {/* Notes Section */}
+                        {booking.classes.notes && (
+                          <div className='flex items-start gap-2 mb-2 p-2 bg-yellow-50 rounded-lg border border-yellow-200'>
+                            <MessageSquare className='h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0' />
+                            <p className='text-sm text-yellow-800 font-medium'>
+                              {booking.classes.notes}
+                            </p>
+                          </div>
+                        )}
+
                         <div className='flex items-center gap-4 text-sm text-gray-600'>
                           <div className='flex items-center gap-1'>
                             <Calendar className='w-3 h-3' />
@@ -442,6 +459,13 @@ export default function JuniorDashboard() {
                             {formatTime(booking.classes.start_time)} -{' '}
                             {formatTime(booking.classes.end_time)}
                           </div>
+                          {/* Location Section - Only added this */}
+                          {booking.classes.field && (
+                            <div className='flex items-center gap-1'>
+                              <MapPin className='w-3 h-3 text-green-600' />
+                              <span>{booking.classes.field}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className='flex-shrink-0'>
@@ -542,7 +566,23 @@ export default function JuniorDashboard() {
                   </h3>
                   <p className='text-sm text-gray-600'>Instructor</p>
                 </div>
-              </div>{' '}
+              </div>
+
+              {/* Notes Section in Modal */}
+              {selectedClass.classes.notes && (
+                <div className='bg-yellow-50 border border-yellow-200 rounded-lg p-3'>
+                  <div className='flex items-center gap-2 mb-2'>
+                    <MessageSquare className='h-4 w-4 text-yellow-600' />
+                    <h4 className='font-semibold text-yellow-800'>
+                      <div className='text-center'>Notas Importantes</div>
+                    </h4>
+                  </div>
+                  <p className='text-sm text-yellow-700'>
+                    {selectedClass.classes.notes}
+                  </p>
+                </div>
+              )}
+
               {/* Información de la clase */}
               <div className='grid grid-cols-2 gap-4'>
                 <div className='space-y-2'>
@@ -584,6 +624,19 @@ export default function JuniorDashboard() {
                   </p>
                 </div>
 
+                {/* Location Section in Modal - Only added this */}
+                {selectedClass.classes.field && (
+                  <div className='space-y-2'>
+                    <div className='flex items-center gap-2'>
+                      <MapPin className='w-4 h-4 text-green-500' />
+                      <span className='text-sm font-medium'>Ubicación</span>
+                    </div>
+                    <p className='text-sm text-gray-600'>
+                      {selectedClass.classes.field}
+                    </p>
+                  </div>
+                )}
+
                 <div className='space-y-2'>
                   <div className='flex items-center gap-2'>
                     <BookOpen className='w-4 h-4 text-purple-500' />
@@ -603,17 +656,7 @@ export default function JuniorDashboard() {
                   </Badge>
                 </div>
               </div>
-              {/* Descripción */}
-              {/* @ts-expect-error - Temporary ignore for type inference issue */}
-              {selectedClass.classes.description && (
-                <div className='space-y-2'>
-                  <h4 className='font-medium'>Descripción</h4>
-                  <p className='text-sm text-gray-600'>
-                    {/* @ts-expect-error - Temporary ignore for type inference issue */}
-                    {selectedClass.classes.description}
-                  </p>
-                </div>
-              )}
+
               {/* Botón de acción */}
               <div className='pt-4'>
                 <Button
