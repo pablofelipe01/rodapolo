@@ -58,97 +58,98 @@ export default function JuniorDashboard() {
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const supabase = createClientSupabase()
 
-  const fetchUpcomingBookings = useCallback(async () => {
-    if (!juniorProfile?.id) {
-      console.log('❌ No juniorProfile.id:', juniorProfile)
+const fetchUpcomingBookings = useCallback(async () => {
+  if (!juniorProfile?.id) {
+    console.log('❌ No juniorProfile.id:', juniorProfile)
+    return
+  }
+
+  try {
+    setIsLoading(true)
+    console.log(
+      '🔍 Fetching MIS RESERVAS for junior:',
+      juniorProfile.unique_code
+    )
+
+    // Get current date (without time) for comparison
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // First get all junior's bookings
+    const { data: bookingsData, error: bookingsError } = await supabase
+      .from('bookings')
+      .select('id, status, class_id')
+      .eq('junior_id', juniorProfile.id)
+      .in('status', ['confirmed', 'attended'])
+
+    if (bookingsError) {
+      console.error('❌ Error fetching bookings:', bookingsError)
+      console.error('Error al cargar las reservas')
       return
     }
 
-    try {
-      setIsLoading(true)
-      console.log(
-        '🔍 Fetching MIS RESERVAS for junior:',
-        juniorProfile.unique_code
-      )
+    console.log('📋 Bookings query result:', bookingsData)
 
-      // Primero obtener todas las reservas del junior
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from('bookings')
-        .select('id, status, class_id')
-        .eq('junior_id', juniorProfile.id)
-        .in('status', ['confirmed', 'attended'])
-
-      if (bookingsError) {
-        console.error('❌ Error fetching bookings:', bookingsError)
-        console.error('Error al cargar las reservas')
-        return
-      }
-
-      console.log('� Bookings query result:', bookingsData)
-
-      if (!bookingsData || bookingsData.length === 0) {
-        console.log('� No bookings found for this junior')
-        setUpcomingBookings([])
-        return
-      }
-
-      // Obtener los IDs únicos de las clases
-      // @ts-expect-error - Temporary ignore for type inference issue
-      const classIds = bookingsData.map(booking => booking.class_id)
-      console.log('🎯 Class IDs to fetch:', classIds)
-
-      // Obtener la información de las clases
-      const { data: classesData, error: classesError } = await supabase
-        .from('classes')
-        .select(
-          `id, date, start_time, end_time, instructor_name, level, notes, field`
-        )
-        .in('id', classIds)
-
-      if (classesError) {
-        console.error('❌ Error fetching classes:', classesError)
-        console.error('Error al cargar información de clases')
-        return
-      }
-
-      console.log('🏫 Classes query result:', classesData)
-
-      // Combinar bookings con classes
-      const validBookings = bookingsData
-        .map(booking => {
-          // @ts-expect-error - Temporary ignore for type inference issue
-          const classInfo = classesData?.find(c => c.id === booking.class_id)
-          if (classInfo) {
-            return {
-              // @ts-expect-error - Temporary ignore for type inference issue
-              ...booking,
-              classes: classInfo,
-            }
-          } else {
-            console.log(
-              // @ts-expect-error - Temporary ignore for type inference issue
-              `⚠️ No class found for booking ${booking.id} with class_id ${booking.class_id}`
-            )
-            return null
-          }
-        })
-        .filter(booking => booking !== null)
-        .sort((a, b) => {
-          const dateA = new Date(a.classes.date)
-          const dateB = new Date(b.classes.date)
-          return dateA.getTime() - dateB.getTime()
-        })
-
-      console.log('✅ Reservas encontradas:', validBookings.length)
-      console.log('📋 Valid bookings:', validBookings)
-      setUpcomingBookings(validBookings)
-    } catch (error) {
-      console.error('💥 Error:', error)
-      console.error('Error al cargar las reservas')
-    } finally {
-      setIsLoading(false)
+    if (!bookingsData || bookingsData.length === 0) {
+      console.log('📭 No bookings found for this junior')
+      setUpcomingBookings([])
+      return
     }
-  }, [juniorProfile, supabase])
+
+    // Get unique class IDs
+    // @ts-expect-error - Temporary ignore for type inference issue
+    const classIds = bookingsData.map(booking => booking.class_id)
+    console.log('🎯 Class IDs to fetch:', classIds)
+
+    // Get class information
+    const { data: classesData, error: classesError } = await supabase
+      .from('classes')
+      .select(
+        `id, date, start_time, end_time, instructor_name, level, notes, field`
+      )
+      .in('id', classIds)
+      .gte('date', today.toISOString().split('T')[0]) // Only future dates
+      .order('date', { ascending: true }) // Order by date ascending
+
+    if (classesError) {
+      console.error('❌ Error fetching classes:', classesError)
+      console.error('Error al cargar información de clases')
+      return
+    }
+
+    console.log('🏫 Classes query result:', classesData)
+
+    // Combine bookings with classes
+    const validBookings = bookingsData
+      .map(booking => {
+        // @ts-expect-error - Temporary ignore for type inference issue
+        const classInfo = classesData?.find(c => c.id === booking.class_id)
+        if (classInfo) {
+          return {
+            // @ts-expect-error - Temporary ignore for type inference issue
+            ...booking,
+            classes: classInfo,
+          }
+        } else {
+          console.log(
+            // @ts-expect-error - Temporary ignore for type inference issue
+            `⚠️ No class found for booking ${booking.id} with class_id ${booking.class_id}`
+          )
+          return null
+        }
+      })
+      .filter(booking => booking !== null)
+
+    console.log('✅ Próximas reservas encontradas:', validBookings.length)
+    console.log('📋 Valid bookings:', validBookings)
+    setUpcomingBookings(validBookings)
+  } catch (error) {
+    console.error('💥 Error:', error)
+    console.error('Error al cargar las reservas')
+  } finally {
+    setIsLoading(false)
+  }
+}, [juniorProfile, supabase])
 
   useEffect(() => {
     console.log('🔄 useEffect triggered with juniorProfile:', juniorProfile)

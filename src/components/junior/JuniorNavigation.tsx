@@ -72,6 +72,11 @@ export function JuniorNavigation({ juniorProfile }: JuniorNavigationProps) {
     return juniorProfile.level === 'alpha' ? '⭐' : '🌟'
   }
 
+  const handleNavigation = (href: string) => {
+    router.push(href)
+    setIsMenuOpen(false)
+  }
+
   return (
     <nav className='fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-white/20 shadow-lg'>
       <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
@@ -91,7 +96,7 @@ export function JuniorNavigation({ juniorProfile }: JuniorNavigationProps) {
                 key={item.href}
                 variant='ghost'
                 className='flex items-center space-x-2 text-gray-700 hover:text-purple-600 hover:bg-purple-50 px-4 py-2 rounded-lg transition-colors'
-                onClick={() => router.push(item.href)}
+                onClick={() => handleNavigation(item.href)}
               >
                 <span className='text-lg'>{item.emoji}</span>
                 <span className='font-medium'>{item.label}</span>
@@ -156,10 +161,7 @@ export function JuniorNavigation({ juniorProfile }: JuniorNavigationProps) {
                   {navItems.map(item => (
                     <DropdownMenuItem
                       key={item.href}
-                      onClick={() => {
-                        router.push(item.href)
-                        setIsMenuOpen(false)
-                      }}
+                      onClick={() => handleNavigation(item.href)}
                       className='flex items-center space-x-3 px-3 py-2 cursor-pointer'
                     >
                       <span className='text-lg'>{item.emoji}</span>
@@ -170,10 +172,7 @@ export function JuniorNavigation({ juniorProfile }: JuniorNavigationProps) {
                 </div>
 
                 <DropdownMenuItem
-                  onClick={() => {
-                    router.push('/junior/profile')
-                    setIsMenuOpen(false)
-                  }}
+                  onClick={() => handleNavigation('/junior/profile')}
                   className='flex items-center space-x-3 px-3 py-2 cursor-pointer'
                 >
                   <User className='h-4 w-4' />
