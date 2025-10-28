@@ -84,7 +84,9 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next()
       } else {
         // Si no hay perfil, redirigir a login
-        console.log('⚠️ Middleware: No se encontró perfil, redirigiendo a login')
+        console.log(
+          '⚠️ Middleware: No se encontró perfil, redirigiendo a login'
+        )
         url.pathname = '/auth/login'
         return NextResponse.redirect(url)
       }
