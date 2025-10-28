@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClientSupabase } from '@/lib/supabase'
 import { emergencySessionReset } from '@/lib/session-utils'
@@ -24,7 +23,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const router = useRouter()
   const supabase = createClientSupabase()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,72 +30,27 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    console.log('🔐 Intentando login con:', { email })
-
     try {
-      console.log('🔄 Llamando a supabase.auth.signInWithPassword...')
-
-      // Crear timeout para el login
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Login timeout')), 10000)
-      )
-
-      const loginPromise = supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      const { data, error } = (await Promise.race([
-        loginPromise,
-        timeoutPromise,
-      ])) as {
-        data: { user: { id: string } | null; session: unknown } | null
-        error: Error | null
-      }
-
-      console.log('🔐 Respuesta de Supabase:', { data, error })
-
       if (error) {
-        console.error('❌ Error de autenticación:', error)
-
-        if (error.message === 'Login timeout') {
-          setError(
-            'La conexión está tardando demasiado. Por favor, intenta de nuevo.'
-          )
-        } else {
-          setError(error.message)
-        }
+        setError(error.message)
         return
       }
 
       if (data.user) {
-        console.log('✅ Usuario autenticado:', data.user.id)
-
-        // Dar tiempo para que el AuthProvider procese la sesión
-        console.log('⏳ Esperando procesamiento de sesión...')
-        await new Promise(resolve => setTimeout(resolve, 1000))
-
-        console.log('🔄 Redirigiendo a /')
-        // El middleware se encargará de redirigir al dashboard apropiado
-        router.push('/')
-
-        // Forzar recarga después de un momento para asegurar que el estado se actualice
-        setTimeout(() => {
-          window.location.href = '/'
-        }, 2000)
+        console.log('✅ Usuario autenticado - redirigiendo')
+        // Just redirect immediately, don't do anything after this
+        window.location.href = '/'
+        return // Important: return immediately after redirect
       }
     } catch (error) {
-      console.error('❌ Error inesperado en catch:', error)
-
-      if ((error as Error).message === 'Login timeout') {
-        setError(
-          'La conexión está tardando demasiado. Por favor, intenta de nuevo.'
-        )
-      } else {
-        setError('Error inesperado al iniciar sesión')
-      }
+      console.error('❌ Error:', error)
+      setError('Error inesperado al iniciar sesión')
     } finally {
-      console.log('🏁 Finalizando login, loading = false')
       setLoading(false)
     }
   }

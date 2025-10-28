@@ -42,32 +42,51 @@ export async function middleware(request: NextRequest) {
 
       // Protección de rutas por rol
       if (profileData) {
-        const userType = (profileData as { role: string }).role
+        const userRole = (profileData as { role: string }).role
+
+        console.log('🔍 Middleware - User role:', userRole, 'Path:', pathname)
 
         // Rutas solo para admins
-        if (pathname.startsWith('/admin') && userType !== 'admin') {
-          url.pathname = userType === 'parental' ? '/parental' : '/junior'
+        if (pathname.startsWith('/admin') && userRole !== 'admin') {
+          url.pathname = userRole === 'parent' ? '/parental' : '/auth/login'
           return NextResponse.redirect(url)
         }
 
-        // Rutas solo para parentales
-        if (pathname.startsWith('/parental') && userType !== 'parental') {
-          url.pathname = userType === 'admin' ? '/admin' : '/junior'
+        // Rutas solo para parentales - FIXED: use 'parent' instead of 'parental'
+        if (pathname.startsWith('/parental') && userRole !== 'parent') {
+          url.pathname = userRole === 'admin' ? '/admin' : '/auth/login'
           return NextResponse.redirect(url)
         }
 
-        // Rutas solo para juniors
-        if (pathname.startsWith('/junior') && userType !== 'junior') {
-          url.pathname = userType === 'admin' ? '/admin' : '/parental'
+        // Rutas solo para juniors (si existen)
+        if (pathname.startsWith('/junior') && userRole !== 'junior') {
+          url.pathname = userRole === 'admin' ? '/admin' : '/parental'
           return NextResponse.redirect(url)
+        }
+
+        // Redirigir usuarios autenticados que van a la raíz
+        if (pathname === '/') {
+          if (userRole === 'admin') {
+            url.pathname = '/admin'
+            return NextResponse.redirect(url)
+          } else if (userRole === 'parent') {
+            url.pathname = '/parental'
+            return NextResponse.redirect(url)
+          }
+          // Si es junior, redirigir a junior dashboard si existe
+          else if (userRole === 'junior') {
+            url.pathname = '/junior'
+            return NextResponse.redirect(url)
+          }
         }
 
         // Allow access to the requested route
         return NextResponse.next()
       } else {
-        // Si no hay perfil, permitir acceso a la ruta solicitada
-        console.log('⚠️ Middleware: No se encontró perfil, permitiendo acceso')
-        return NextResponse.next()
+        // Si no hay perfil, redirigir a login
+        console.log('⚠️ Middleware: No se encontró perfil, redirigiendo a login')
+        url.pathname = '/auth/login'
+        return NextResponse.redirect(url)
       }
     }
 
