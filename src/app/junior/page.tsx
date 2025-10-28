@@ -71,7 +71,11 @@ export default function JuniorDashboard() {
         juniorProfile.unique_code
       )
 
-      // Primero obtener todas las reservas del junior
+      // Get current date (without time) for comparison
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      // First get all junior's bookings
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
         .select('id, status, class_id')
@@ -84,26 +88,28 @@ export default function JuniorDashboard() {
         return
       }
 
-      console.log('� Bookings query result:', bookingsData)
+      console.log('📋 Bookings query result:', bookingsData)
 
       if (!bookingsData || bookingsData.length === 0) {
-        console.log('� No bookings found for this junior')
+        console.log('📭 No bookings found for this junior')
         setUpcomingBookings([])
         return
       }
 
-      // Obtener los IDs únicos de las clases
+      // Get unique class IDs
       // @ts-expect-error - Temporary ignore for type inference issue
       const classIds = bookingsData.map(booking => booking.class_id)
       console.log('🎯 Class IDs to fetch:', classIds)
 
-      // Obtener la información de las clases
+      // Get class information
       const { data: classesData, error: classesError } = await supabase
         .from('classes')
         .select(
           `id, date, start_time, end_time, instructor_name, level, notes, field`
         )
         .in('id', classIds)
+        .gte('date', today.toISOString().split('T')[0]) // Only future dates
+        .order('date', { ascending: true }) // Order by date ascending
 
       if (classesError) {
         console.error('❌ Error fetching classes:', classesError)
@@ -113,7 +119,7 @@ export default function JuniorDashboard() {
 
       console.log('🏫 Classes query result:', classesData)
 
-      // Combinar bookings con classes
+      // Combine bookings with classes
       const validBookings = bookingsData
         .map(booking => {
           // @ts-expect-error - Temporary ignore for type inference issue
@@ -133,13 +139,8 @@ export default function JuniorDashboard() {
           }
         })
         .filter(booking => booking !== null)
-        .sort((a, b) => {
-          const dateA = new Date(a.classes.date)
-          const dateB = new Date(b.classes.date)
-          return dateA.getTime() - dateB.getTime()
-        })
 
-      console.log('✅ Reservas encontradas:', validBookings.length)
+      console.log('✅ Próximas reservas encontradas:', validBookings.length)
       console.log('📋 Valid bookings:', validBookings)
       setUpcomingBookings(validBookings)
     } catch (error) {
