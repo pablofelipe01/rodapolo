@@ -4,8 +4,8 @@ import type { NextRequest } from 'next/server'
 
 // Define the profile type
 interface Profile {
-  role: string;
-  user_id: string;
+  role: string
+  user_id: string
   // Add other fields if needed
 }
 
@@ -24,9 +24,12 @@ export async function middleware(request: NextRequest) {
     }
 
     const supabase = await createServerSupabase()
-    
+
     // Get session with better error handling
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession()
 
     if (sessionError) {
       console.error('❌ Session error:', sessionError)
@@ -69,7 +72,9 @@ export async function middleware(request: NextRequest) {
     // Rutas solo para admins
     if (pathname.startsWith('/admin') && userRole !== 'admin') {
       const redirectPath = userRole === 'parental' ? '/parental' : '/auth/login'
-      console.log(`🔄 Redirecting non-admin from ${pathname} to ${redirectPath}`)
+      console.log(
+        `🔄 Redirecting non-admin from ${pathname} to ${redirectPath}`
+      )
       url.pathname = redirectPath
       return NextResponse.redirect(url)
     }
@@ -77,15 +82,24 @@ export async function middleware(request: NextRequest) {
     // Rutas solo para parentales
     if (pathname.startsWith('/parental') && userRole !== 'parental') {
       const redirectPath = userRole === 'admin' ? '/admin' : '/auth/login'
-      console.log(`🔄 Redirecting non-parental from ${pathname} to ${redirectPath}`)
+      console.log(
+        `🔄 Redirecting non-parental from ${pathname} to ${redirectPath}`
+      )
       url.pathname = redirectPath
       return NextResponse.redirect(url)
     }
 
     // Rutas solo para juniors
     if (pathname.startsWith('/junior') && userRole !== 'junior') {
-      const redirectPath = userRole === 'admin' ? '/admin' : userRole === 'parental' ? '/parental' : '/auth/login'
-      console.log(`🔄 Redirecting non-junior from ${pathname} to ${redirectPath}`)
+      const redirectPath =
+        userRole === 'admin'
+          ? '/admin'
+          : userRole === 'parental'
+            ? '/parental'
+            : '/auth/login'
+      console.log(
+        `🔄 Redirecting non-junior from ${pathname} to ${redirectPath}`
+      )
       url.pathname = redirectPath
       return NextResponse.redirect(url)
     }
@@ -93,7 +107,7 @@ export async function middleware(request: NextRequest) {
     // Redirigir usuarios autenticados que van a la raíz
     if (pathname === '/') {
       let redirectPath = '/auth/login'
-      
+
       if (userRole === 'admin') {
         redirectPath = '/admin'
       } else if (userRole === 'parental') {
@@ -101,8 +115,10 @@ export async function middleware(request: NextRequest) {
       } else if (userRole === 'junior') {
         redirectPath = '/junior'
       }
-      
-      console.log(`🏠 Redirecting root access for ${userRole} to ${redirectPath}`)
+
+      console.log(
+        `🏠 Redirecting root access for ${userRole} to ${redirectPath}`
+      )
       url.pathname = redirectPath
       return NextResponse.redirect(url)
     }
@@ -110,7 +126,6 @@ export async function middleware(request: NextRequest) {
     // Allow access to the requested route
     console.log(`✅ Allowing access to ${pathname} for role ${userRole}`)
     return NextResponse.next()
-
   } catch (error) {
     console.error('❌ Middleware error:', error)
 
@@ -131,7 +146,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.).*)',
-  ],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\.).*)'],
 }

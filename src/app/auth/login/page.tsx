@@ -25,36 +25,36 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const supabase = createClientSupabase()
 
-// In your login component, replace the success handler:
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
-  setLoading(true)
-  setError('')
+  // In your login component, replace the success handler:
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
 
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (error) {
-      setError(error.message)
-      return
+      if (error) {
+        setError(error.message)
+        return
+      }
+
+      if (data.user) {
+        console.log('✅ Usuario autenticado - redirigiendo')
+        // Force a hard refresh to ensure middleware runs properly on Vercel
+        window.location.href = '/'
+        return
+      }
+    } catch (error) {
+      console.error('❌ Error:', error)
+      setError('Error inesperado al iniciar sesión')
+    } finally {
+      setLoading(false)
     }
-
-    if (data.user) {
-      console.log('✅ Usuario autenticado - redirigiendo')
-      // Force a hard refresh to ensure middleware runs properly on Vercel
-      window.location.href = '/'
-      return
-    }
-  } catch (error) {
-    console.error('❌ Error:', error)
-    setError('Error inesperado al iniciar sesión')
-  } finally {
-    setLoading(false)
   }
-}
 
   return (
     <MainLayout showNavigation={false}>
