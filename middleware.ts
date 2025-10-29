@@ -37,7 +37,7 @@ export async function middleware(request: NextRequest) {
       const { data: profileData } = await supabase
         .from('profiles')
         .select('role')
-        .eq('user_id', session.user.id)
+        .eq('user_id', session.user.id) // FIXED: changed 'id' to 'user_id'
         .single()
 
       // Protección de rutas por rol
@@ -48,19 +48,19 @@ export async function middleware(request: NextRequest) {
 
         // Rutas solo para admins
         if (pathname.startsWith('/admin') && userRole !== 'admin') {
-          url.pathname = userRole === 'parent' ? '/parental' : '/auth/login'
+          url.pathname = userRole === 'parental' ? '/parental' : '/auth/login' // FIXED: 'parent' to 'parental'
           return NextResponse.redirect(url)
         }
 
-        // Rutas solo para parentales - FIXED: use 'parent' instead of 'parental'
-        if (pathname.startsWith('/parental') && userRole !== 'parent') {
+        // Rutas solo para parentales - FIXED: use 'parental' instead of 'parent'
+        if (pathname.startsWith('/parental') && userRole !== 'parental') {
           url.pathname = userRole === 'admin' ? '/admin' : '/auth/login'
           return NextResponse.redirect(url)
         }
 
         // Rutas solo para juniors (si existen)
         if (pathname.startsWith('/junior') && userRole !== 'junior') {
-          url.pathname = userRole === 'admin' ? '/admin' : '/parental'
+          url.pathname = userRole === 'admin' ? '/admin' : userRole === 'parental' ? '/parental' : '/auth/login' // FIXED: added parental check
           return NextResponse.redirect(url)
         }
 
@@ -69,7 +69,7 @@ export async function middleware(request: NextRequest) {
           if (userRole === 'admin') {
             url.pathname = '/admin'
             return NextResponse.redirect(url)
-          } else if (userRole === 'parent') {
+          } else if (userRole === 'parental') { // FIXED: 'parent' to 'parental'
             url.pathname = '/parental'
             return NextResponse.redirect(url)
           }
@@ -115,13 +115,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 }
