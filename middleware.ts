@@ -2,6 +2,13 @@ import { createServerSupabase } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+// Define the profile type
+interface Profile {
+  role: string;
+  user_id: string;
+  // Add other fields if needed
+}
+
 export async function middleware(request: NextRequest) {
   try {
     const url = request.nextUrl.clone()
@@ -16,95 +23,105 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next()
     }
 
-    // Crear timeout para operaciones de Supabase
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Middleware timeout')), 3000)
-    )
+    const supabase = await createServerSupabase()
+    
+    // Get session with better error handling
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
-    const supabaseOperations = async () => {
-      const supabase = await createServerSupabase()
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      // Si no hay sesión, redirigir a login
-      if (!session) {
-        url.pathname = '/auth/login'
-        return NextResponse.redirect(url)
-      }
-
-      // Si hay sesión, obtener el perfil para verificar el rol
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('user_id', session.user.id) // FIXED: changed 'id' to 'user_id'
-        .single()
-
-      // Protección de rutas por rol
-      if (profileData) {
-        const userRole = (profileData as { role: string }).role
-
-        console.log('🔍 Middleware - User role:', userRole, 'Path:', pathname)
-
-        // Rutas solo para admins
-        if (pathname.startsWith('/admin') && userRole !== 'admin') {
-          url.pathname = userRole === 'parental' ? '/parental' : '/auth/login' // FIXED: 'parent' to 'parental'
-          return NextResponse.redirect(url)
-        }
-
-        // Rutas solo para parentales - FIXED: use 'parental' instead of 'parent'
-        if (pathname.startsWith('/parental') && userRole !== 'parental') {
-          url.pathname = userRole === 'admin' ? '/admin' : '/auth/login'
-          return NextResponse.redirect(url)
-        }
-
-        // Rutas solo para juniors (si existen)
-        if (pathname.startsWith('/junior') && userRole !== 'junior') {
-          url.pathname = userRole === 'admin' ? '/admin' : userRole === 'parental' ? '/parental' : '/auth/login' // FIXED: added parental check
-          return NextResponse.redirect(url)
-        }
-
-        // Redirigir usuarios autenticados que van a la raíz
-        if (pathname === '/') {
-          if (userRole === 'admin') {
-            url.pathname = '/admin'
-            return NextResponse.redirect(url)
-          } else if (userRole === 'parental') { // FIXED: 'parent' to 'parental'
-            url.pathname = '/parental'
-            return NextResponse.redirect(url)
-          }
-          // Si es junior, redirigir a junior dashboard si existe
-          else if (userRole === 'junior') {
-            url.pathname = '/junior'
-            return NextResponse.redirect(url)
-          }
-        }
-
-        // Allow access to the requested route
-        return NextResponse.next()
-      } else {
-        // Si no hay perfil, redirigir a login
-        console.log(
-          '⚠️ Middleware: No se encontró perfil, redirigiendo a login'
-        )
-        url.pathname = '/auth/login'
-        return NextResponse.redirect(url)
-      }
+    if (sessionError) {
+      console.error('❌ Session error:', sessionError)
+      url.pathname = '/auth/login'
+      return NextResponse.redirect(url)
     }
 
-    // Ejecutar con timeout
-    const result = await Promise.race([supabaseOperations(), timeoutPromise])
-    return result as NextResponse
+    // Si no hay sesión, redirigir a login
+    if (!session) {
+      console.log('🔐 No session found, redirecting to login')
+      url.pathname = '/auth/login'
+      return NextResponse.redirect(url)
+    }
+
+    // Si hay sesión, obtener el perfil para verificar el rol
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('user_id', session.user.id)
+      .single()
+
+    if (profileError) {
+      console.error('❌ Profile fetch error:', profileError)
+      url.pathname = '/auth/login'
+      return NextResponse.redirect(url)
+    }
+
+    if (!profileData) {
+      console.log('⚠️ No profile found, redirecting to login')
+      url.pathname = '/auth/login'
+      return NextResponse.redirect(url)
+    }
+
+    // Type assertion to fix the TypeScript error
+    const profile = profileData as Profile
+    const userRole = profile.role
+
+    console.log('🔍 Middleware - User role:', userRole, 'Path:', pathname)
+
+    // Rutas solo para admins
+    if (pathname.startsWith('/admin') && userRole !== 'admin') {
+      const redirectPath = userRole === 'parental' ? '/parental' : '/auth/login'
+      console.log(`🔄 Redirecting non-admin from ${pathname} to ${redirectPath}`)
+      url.pathname = redirectPath
+      return NextResponse.redirect(url)
+    }
+
+    // Rutas solo para parentales
+    if (pathname.startsWith('/parental') && userRole !== 'parental') {
+      const redirectPath = userRole === 'admin' ? '/admin' : '/auth/login'
+      console.log(`🔄 Redirecting non-parental from ${pathname} to ${redirectPath}`)
+      url.pathname = redirectPath
+      return NextResponse.redirect(url)
+    }
+
+    // Rutas solo para juniors
+    if (pathname.startsWith('/junior') && userRole !== 'junior') {
+      const redirectPath = userRole === 'admin' ? '/admin' : userRole === 'parental' ? '/parental' : '/auth/login'
+      console.log(`🔄 Redirecting non-junior from ${pathname} to ${redirectPath}`)
+      url.pathname = redirectPath
+      return NextResponse.redirect(url)
+    }
+
+    // Redirigir usuarios autenticados que van a la raíz
+    if (pathname === '/') {
+      let redirectPath = '/auth/login'
+      
+      if (userRole === 'admin') {
+        redirectPath = '/admin'
+      } else if (userRole === 'parental') {
+        redirectPath = '/parental'
+      } else if (userRole === 'junior') {
+        redirectPath = '/junior'
+      }
+      
+      console.log(`🏠 Redirecting root access for ${userRole} to ${redirectPath}`)
+      url.pathname = redirectPath
+      return NextResponse.redirect(url)
+    }
+
+    // Allow access to the requested route
+    console.log(`✅ Allowing access to ${pathname} for role ${userRole}`)
+    return NextResponse.next()
+
   } catch (error) {
     console.error('❌ Middleware error:', error)
 
-    // En caso de error, permitir acceso a rutas públicas
+    // En caso de error, redirigir a login para rutas no públicas
     const url = request.nextUrl.clone()
     const pathname = url.pathname
     const publicRoutes = ['/auth/login', '/auth/register', '/auth/junior', '/']
     const isPublicRoute = publicRoutes.includes(pathname)
 
     if (!isPublicRoute) {
+      console.log('🚨 Error occurred, redirecting to login')
       url.pathname = '/auth/login'
       return NextResponse.redirect(url)
     }
@@ -115,6 +132,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.).*)',
   ],
 }
