@@ -4,8 +4,8 @@ import { createMiddlewareSupabase } from '@/lib/supabase-middleware'
 
 // Define the profile type structure
 interface Profile {
-  role: string;
-  user_id: string;
+  role: string
+  user_id: string
 }
 
 export async function middleware(request: NextRequest) {
@@ -26,9 +26,10 @@ export async function middleware(request: NextRequest) {
   try {
     // Use the middleware-specific Supabase client
     const { supabase, response } = createMiddlewareSupabase(request)
-    
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession()
     if (sessionError) {
       console.error('❌ Session error:', sessionError)
       url.pathname = '/auth/login'
@@ -69,7 +70,6 @@ export async function middleware(request: NextRequest) {
     // Handle root path redirect
     if (pathname === '/') {
       let redirectPath = '/auth/login'
-      
       if (userRole === 'admin') {
         redirectPath = '/admin'
       } else if (userRole === 'parental') {
@@ -77,7 +77,6 @@ export async function middleware(request: NextRequest) {
       } else if (userRole === 'junior') {
         redirectPath = '/junior'
       }
-      
       console.log(`🏠 Redirecting ${userRole} from / to ${redirectPath}`)
       url.pathname = redirectPath
       return NextResponse.redirect(url)
@@ -86,21 +85,24 @@ export async function middleware(request: NextRequest) {
     // Role-based protection
     if (pathname.startsWith('/admin') && userRole !== 'admin') {
       const redirectPath = userRole === 'parental' ? '/parental' : '/auth/login'
-      console.log(`🚫 Blocking non-admin from admin area, redirecting to ${redirectPath}`)
+      console.log(
+        `🚫 Blocking non-admin from admin area, redirecting to ${redirectPath}`
+      )
       url.pathname = redirectPath
       return NextResponse.redirect(url)
     }
 
     if (pathname.startsWith('/parental') && userRole !== 'parental') {
       const redirectPath = userRole === 'admin' ? '/admin' : '/auth/login'
-      console.log(`🚫 Blocking non-parental from parental area, redirecting to ${redirectPath}`)
+      console.log(
+        `🚫 Blocking non-parental from parental area, redirecting to ${redirectPath}`
+      )
       url.pathname = redirectPath
       return NextResponse.redirect(url)
     }
 
     console.log(`✅ Allowing ${userRole} access to ${pathname}`)
     return response
-
   } catch (error) {
     console.error('❌ Middleware error:', error)
     url.pathname = '/auth/login'
@@ -109,7 +111,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 }
