@@ -46,17 +46,101 @@ interface BookingWithClass {
   }
 }
 
+interface JuniorStats {
+  totalClasses: number
+  attendedClasses: number
+  achievements: number
+  currentStreak: number
+}
+
 export default function JuniorDashboard() {
   const { juniorProfile } = useJuniorAuth()
   const [upcomingBookings, setUpcomingBookings] = useState<BookingWithClass[]>(
     []
   )
+  const [juniorStats, setJuniorStats] = useState<JuniorStats>({
+    totalClasses: 0,
+    attendedClasses: 0,
+    achievements: 0,
+    currentStreak: 0,
+  })
   const [isLoading, setIsLoading] = useState(true)
   const [selectedClass, setSelectedClass] = useState<BookingWithClass | null>(
     null
   )
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const supabase = createClientSupabase()
+
+  const fetchJuniorStats = useCallback(async () => {
+    if (!juniorProfile?.id) return
+
+    try {
+      // Fetch statistics from simple_bookings_view
+      type BookingStat = {
+        status: 'pending' | 'confirmed' | 'cancelled' | 'attended'
+        class_date: string
+      }
+      const { data: bookings, error } = (await supabase
+        .from('simple_bookings_view')
+        .select('status, class_date')
+        .eq('junior_id', juniorProfile.id)) as {
+        data: BookingStat[] | null
+        error: any
+      }
+
+      if (error) {
+        console.error('Error fetching stats:', error)
+        return
+      }
+
+      // Calculate statistics
+      const totalClasses = bookings?.length || 0
+      const attendedClasses =
+        bookings?.filter(booking => booking.status === 'attended').length || 0
+
+      // Calculate current streak (consecutive attended classes)
+      const today = new Date()
+      let currentStreak = 0
+      const sortedAttendedClasses =
+        bookings
+          ?.filter(booking => booking.status === 'attended')
+          ?.sort(
+            (a, b) =>
+              new Date(b.class_date).getTime() -
+              new Date(a.class_date).getTime()
+          ) || []
+
+      for (const booking of sortedAttendedClasses) {
+        const classDate = new Date(booking.class_date)
+        const diffTime = today.getTime() - classDate.getTime()
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+        if (diffDays <= currentStreak + 1) {
+          currentStreak++
+        } else {
+          break
+        }
+      }
+
+      // Calculate achievements based on milestones
+      let achievements = 0
+      if (attendedClasses >= 1) achievements++ // First class
+      if (attendedClasses >= 5) achievements++ // 5 classes
+      if (attendedClasses >= 10) achievements++ // 10 classes
+      if (attendedClasses >= 20) achievements++ // 20 classes
+      if (currentStreak >= 3) achievements++ // 3-day streak
+      if (currentStreak >= 7) achievements++ // 7-day streak
+
+      setJuniorStats({
+        totalClasses,
+        attendedClasses,
+        achievements,
+        currentStreak,
+      })
+    } catch (error) {
+      console.error('Error calculating stats:', error)
+    }
+  }, [juniorProfile, supabase])
 
   const fetchUpcomingBookings = useCallback(async () => {
     if (!juniorProfile?.id) {
@@ -156,10 +240,11 @@ export default function JuniorDashboard() {
     if (juniorProfile) {
       console.log('✅ Calling fetchUpcomingBookings')
       fetchUpcomingBookings()
+      fetchJuniorStats()
     } else {
       console.log('❌ No juniorProfile, not fetching bookings')
     }
-  }, [juniorProfile, fetchUpcomingBookings])
+  }, [juniorProfile, fetchUpcomingBookings, fetchJuniorStats])
 
   const getAge = () => {
     if (!juniorProfile?.birth_date) return null
@@ -311,7 +396,7 @@ export default function JuniorDashboard() {
               </CardContent>
             </Card>
 
-            {/* Tarjeta de estadísticas */}
+            {/* Tarjeta de estadísticas REALES */}
             <Card className='bg-white/90 backdrop-blur-sm border-0 shadow-xl'>
               <CardHeader className='text-center pb-3'>
                 <CardTitle className='flex items-center justify-center gap-2 text-lg'>
@@ -326,7 +411,7 @@ export default function JuniorDashboard() {
                     variant='secondary'
                     className='bg-blue-100 text-blue-800'
                   >
-                    12 📚
+                    {juniorStats.totalClasses} 📚
                   </Badge>
                 </div>
                 <div className='flex items-center justify-between'>
@@ -337,16 +422,22 @@ export default function JuniorDashboard() {
                     variant='secondary'
                     className='bg-yellow-100 text-yellow-800'
                   >
-                    5 🏆
+                    {juniorStats.achievements} 🏆
                   </Badge>
                 </div>
                 <div className='flex items-center justify-between'>
                   <span className='text-sm text-gray-600'>Racha actual</span>
                   <Badge
                     variant='secondary'
-                    className='bg-green-100 text-green-800'
+                    className={`${
+                      juniorStats.currentStreak > 0
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}
                   >
-                    3 días 🔥
+                    {juniorStats.currentStreak > 0
+                      ? `${juniorStats.currentStreak} días 🔥`
+                      : '0 días'}
                   </Badge>
                 </div>
               </CardContent>
@@ -363,7 +454,9 @@ export default function JuniorDashboard() {
               <CardContent className='text-center space-y-3'>
                 <div className='text-4xl mb-2'>🌟</div>
                 <p className='text-sm opacity-90'>
-                  ¡Estás haciendo un trabajo increíble!
+                  {juniorStats.attendedClasses > 0
+                    ? `¡Ya has tomado ${juniorStats.attendedClasses} clases!`
+                    : '¡Tu primera clase será increíble!'}
                 </p>
                 <p className='text-xs opacity-75'>
                   Cada práctica te acerca más a tus metas
@@ -372,6 +465,7 @@ export default function JuniorDashboard() {
             </Card>
           </div>
 
+          {/* Resto del código permanece igual... */}
           {/* Próximas clases */}
           <Card className='bg-white/90 backdrop-blur-sm border-0 shadow-xl'>
             <CardHeader>
