@@ -16,13 +16,19 @@ export const createServerSupabase = async () => {
         },
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, {
+                ...options,
+                // Vercel-specific settings
+                sameSite: 'lax',
+                secure: process.env.NODE_ENV === 'production',
+                // Remove domain setting or set to your actual domain
+              })
+            })
+          } catch (error) {
+            console.error('Cookie set error in middleware:', error)
+            // Don't swallow the error on Vercel - this is critical!
+            throw error
           }
         },
       },
