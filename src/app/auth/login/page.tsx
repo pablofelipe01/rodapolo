@@ -43,8 +43,8 @@ export default function LoginPage() {
       }
 
       if (data.user) {
-        console.log('✅ Usuario autenticado - redirigiendo')
-        // Force a hard refresh to ensure middleware runs properly on Vercel
+        console.log('✅ Usuario autenticado - forzando recarga completa')
+        // Force a complete page reload to ensure middleware runs
         window.location.href = '/'
         return
       }
