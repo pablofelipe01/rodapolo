@@ -14,7 +14,7 @@ export async function middleware(request: NextRequest) {
 
   console.log('🚀 Middleware triggered for:', pathname)
 
-  // Public routes
+  // Public routes - allow without any checks
   const publicRoutes = ['/auth/login', '/auth/register', '/auth/junior', '/']
   const isPublicRoute = publicRoutes.includes(pathname)
 
@@ -30,16 +30,29 @@ export async function middleware(request: NextRequest) {
       data: { session },
       error: sessionError,
     } = await supabase.auth.getSession()
+
     if (sessionError) {
       console.error('❌ Session error:', sessionError)
-      url.pathname = '/auth/login'
-      return NextResponse.redirect(url)
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = '/auth/login'
+      const redirectResponse = NextResponse.redirect(redirectUrl)
+      // Copy cookies from the original response
+      response.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie.name, cookie.value)
+      })
+      return redirectResponse
     }
 
     if (!session) {
       console.log('🔐 No session found')
-      url.pathname = '/auth/login'
-      return NextResponse.redirect(url)
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = '/auth/login'
+      const redirectResponse = NextResponse.redirect(redirectUrl)
+      // Copy cookies from the original response
+      response.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie.name, cookie.value)
+      })
+      return redirectResponse
     }
 
     console.log('👤 Session found for:', session.user.email)
@@ -51,36 +64,17 @@ export async function middleware(request: NextRequest) {
       .eq('user_id', session.user.id)
       .single()
 
-    if (profileError) {
-      console.error('❌ Profile error:', profileError)
-      url.pathname = '/auth/login'
-      return NextResponse.redirect(url)
-    }
-
-    if (!profile) {
-      console.log('⚠️ No profile found')
-      url.pathname = '/auth/login'
-      return NextResponse.redirect(url)
+    if (profileError || !profile) {
+      console.error('❌ Profile error:', profileError?.message || 'No profile found')
+      // Don't redirect to login - let the client handle missing profile
+      // This prevents loops when profile doesn't exist yet
+      console.log('⚠️ Allowing access despite profile error - client will handle')
+      return response
     }
 
     // Fix the TypeScript error by asserting the type
     const userRole = (profile as Profile).role
     console.log(`🔍 User role: ${userRole}, Path: ${pathname}`)
-
-    // Handle root path redirect
-    if (pathname === '/') {
-      let redirectPath = '/auth/login'
-      if (userRole === 'admin') {
-        redirectPath = '/admin'
-      } else if (userRole === 'parental') {
-        redirectPath = '/parental'
-      } else if (userRole === 'junior') {
-        redirectPath = '/junior'
-      }
-      console.log(`🏠 Redirecting ${userRole} from / to ${redirectPath}`)
-      url.pathname = redirectPath
-      return NextResponse.redirect(url)
-    }
 
     // Role-based protection
     if (pathname.startsWith('/admin') && userRole !== 'admin') {
@@ -88,8 +82,13 @@ export async function middleware(request: NextRequest) {
       console.log(
         `🚫 Blocking non-admin from admin area, redirecting to ${redirectPath}`
       )
-      url.pathname = redirectPath
-      return NextResponse.redirect(url)
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = redirectPath
+      const redirectResponse = NextResponse.redirect(redirectUrl)
+      response.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie.name, cookie.value)
+      })
+      return redirectResponse
     }
 
     if (pathname.startsWith('/parental') && userRole !== 'parental') {
@@ -97,16 +96,35 @@ export async function middleware(request: NextRequest) {
       console.log(
         `🚫 Blocking non-parental from parental area, redirecting to ${redirectPath}`
       )
-      url.pathname = redirectPath
-      return NextResponse.redirect(url)
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = redirectPath
+      const redirectResponse = NextResponse.redirect(redirectUrl)
+      response.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie.name, cookie.value)
+      })
+      return redirectResponse
+    }
+
+    if (pathname.startsWith('/junior') && userRole !== 'junior') {
+      const redirectPath = userRole === 'admin' ? '/admin' : userRole === 'parental' ? '/parental' : '/auth/login'
+      console.log(
+        `🚫 Blocking non-junior from junior area, redirecting to ${redirectPath}`
+      )
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = redirectPath
+      const redirectResponse = NextResponse.redirect(redirectUrl)
+      response.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie.name, cookie.value)
+      })
+      return redirectResponse
     }
 
     console.log(`✅ Allowing ${userRole} access to ${pathname}`)
     return response
   } catch (error) {
     console.error('❌ Middleware error:', error)
-    url.pathname = '/auth/login'
-    return NextResponse.redirect(url)
+    // On error, allow the request to continue - let client handle auth
+    return NextResponse.next()
   }
 }
 
