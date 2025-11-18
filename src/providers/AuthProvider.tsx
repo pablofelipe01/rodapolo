@@ -50,15 +50,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       console.log('🔍 Fetching profile for user:', userId)
+      console.log('🌐 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
 
-      const { data: profileData, error } = await supabase
+      const {
+        data: profileData,
+        error,
+        status,
+        statusText,
+      } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .single()
 
+      console.log('📊 Profile query result:', {
+        hasData: !!profileData,
+        error: error?.message,
+        code: error?.code,
+        status,
+        statusText,
+      })
+
       if (error) {
-        console.error('❌ Profile fetch error:', error.message, error.code)
+        console.error(
+          '❌ Profile fetch error:',
+          error.message,
+          error.code,
+          error.details,
+          error.hint
+        )
         setProfile(null)
         return
       }
@@ -71,7 +91,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const profile =
         profileData as Database['public']['Tables']['profiles']['Row']
-      console.log('✅ Profile loaded successfully:', profile.role)
+      console.log(
+        '✅ Profile loaded successfully:',
+        profile.role,
+        profile.full_name
+      )
       setProfile(profile)
       lastFetchedUserId.current = userId
     } catch (error) {
