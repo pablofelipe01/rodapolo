@@ -52,16 +52,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔍 Fetching profile for user:', userId)
       console.log('🌐 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
 
+      // Add timeout to prevent hanging requests
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(
+          () => reject(new Error('Profile fetch timeout after 8s')),
+          8000
+        )
+      })
+
+      const queryPromise = supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+
       const {
         data: profileData,
         error,
         status,
         statusText,
-      } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single()
+      } = await Promise.race([queryPromise, timeoutPromise])
 
       console.log('📊 Profile query result:', {
         hasData: !!profileData,
@@ -108,7 +118,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = async () => {
     if (user) {
-      lastFetchedUserId.current = null // Force refresh
+      // Reset all refs to force a fresh fetch
+      lastFetchedUserId.current = null
+      isFetchingProfile.current = false
       await fetchProfile(user.id)
     }
   }
