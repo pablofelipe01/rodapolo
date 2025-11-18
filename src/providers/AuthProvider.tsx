@@ -1,12 +1,6 @@
 'use client'
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useRef,
-} from 'react'
+import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientSupabase } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
@@ -67,8 +61,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      console.log('✅ Profile loaded successfully:', profileData.role)
-      setProfile(profileData)
+      const profile =
+        profileData as Database['public']['Tables']['profiles']['Row']
+      console.log('✅ Profile loaded successfully:', profile.role)
+      setProfile(profile)
       lastFetchedUserId.current = userId
     } catch (error) {
       console.error('❌ Unexpected error:', error)
