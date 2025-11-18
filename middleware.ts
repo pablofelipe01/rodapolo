@@ -26,13 +26,16 @@ export async function middleware(request: NextRequest) {
   try {
     // Use the middleware-specific Supabase client
     const { supabase, response } = createMiddlewareSupabase(request)
+
+    // IMPORTANT: Use getUser() instead of getSession() for server-side validation
+    // getSession() reads from cookies without validation, getUser() validates with Supabase
     const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession()
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
 
-    if (sessionError) {
-      console.error('❌ Session error:', sessionError)
+    if (userError || !user) {
+      console.log('🔐 No valid user found:', userError?.message || 'No user')
       const redirectUrl = request.nextUrl.clone()
       redirectUrl.pathname = '/auth/login'
       const redirectResponse = NextResponse.redirect(redirectUrl)
@@ -43,25 +46,13 @@ export async function middleware(request: NextRequest) {
       return redirectResponse
     }
 
-    if (!session) {
-      console.log('🔐 No session found')
-      const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = '/auth/login'
-      const redirectResponse = NextResponse.redirect(redirectUrl)
-      // Copy cookies from the original response
-      response.cookies.getAll().forEach((cookie) => {
-        redirectResponse.cookies.set(cookie.name, cookie.value)
-      })
-      return redirectResponse
-    }
-
-    console.log('👤 Session found for:', session.user.email)
+    console.log('👤 User validated:', user.email)
 
     // Get user profile with proper typing
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .single()
 
     if (profileError || !profile) {
