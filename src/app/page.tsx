@@ -27,21 +27,34 @@ export default function HomePage() {
   const { user, profile, loading } = useAuth()
   const router = useRouter()
   const [_isVisible, setIsVisible] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false)
 
   useEffect(() => {
-    if (!loading && user && profile) {
-      router.push(`/${profile.role}`)
+    console.log('🏠 HomePage effect:', {
+      loading,
+      hasUser: !!user,
+      hasProfile: !!profile,
+      role: profile?.role,
+    })
+
+    if (!loading && user && profile && !isRedirecting) {
+      const redirectPath = `/${profile.role}`
+      console.log('🚀 Redirecting to:', redirectPath)
+      setIsRedirecting(true)
+      router.push(redirectPath)
     }
     setIsVisible(true)
-  }, [user, profile, loading, router])
+  }, [user, profile, loading, router, isRedirecting])
 
-  if (loading) {
+  if (loading || isRedirecting) {
     return (
       <MainLayout showNavigation={false}>
         <div className='flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900'>
           <div className='text-center'>
             <div className='animate-spin rounded-full h-16 w-16 border-4 border-cyan-400 border-t-transparent mx-auto mb-4'></div>
-            <p className='text-cyan-100 font-light'>Cargando experiencia...</p>
+            <p className='text-cyan-100 font-light'>
+              {isRedirecting ? 'Redirigiendo...' : 'Cargando experiencia...'}
+            </p>
           </div>
         </div>
       </MainLayout>
