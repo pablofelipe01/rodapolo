@@ -1,6 +1,13 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useRef } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+  useMemo,
+} from 'react'
 import { useRouter } from 'next/navigation'
 import { createClientSupabase } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
@@ -16,9 +23,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Create a single instance of the Supabase client
-const supabase = createClientSupabase()
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<
@@ -27,9 +31,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
+  // Create supabase client inside component with useMemo
+  const supabase = useMemo(() => createClientSupabase(), [])
+
   // Use refs to prevent duplicate fetches
   const isFetchingProfile = useRef(false)
   const lastFetchedUserId = useRef<string | null>(null)
+  const initializationComplete = useRef(false)
 
   const fetchProfile = async (userId: string) => {
     // Prevent duplicate fetches for the same user
@@ -84,6 +92,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true
 
+    // Add timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      if (mounted && loading && !initializationComplete.current) {
+        console.error('⏰ Auth initialization timeout after 10s')
+        setLoading(false)
+      }
+    }, 10000)
+
     const initializeAuth = async () => {
       try {
         console.log('🚀 Initializing auth...')
@@ -93,6 +109,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           error,
         } = await supabase.auth.getSession()
 
+        console.log('📦 getSession result:', {
+          hasSession: !!session,
+          hasUser: !!session?.user,
+          error: error?.message,
+        })
+
         if (!mounted) return
 
         if (error) {
@@ -100,6 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null)
           setProfile(null)
           setLoading(false)
+          initializationComplete.current = true
           return
         }
 
@@ -114,12 +137,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         setLoading(false)
+        initializationComplete.current = true
         console.log('✅ Auth initialization complete')
       } catch (error) {
         console.error('❌ Auth initialization error:', error)
         setUser(null)
         setProfile(null)
         setLoading(false)
+        initializationComplete.current = true
       }
     }
 
@@ -128,36 +153,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 Auth state changed:', event)
+      console.log('🔄 Auth state changed:', event, {
+        hasSession: !!session,
+        hasUser: !!session?.user,
+      })
 
       if (!mounted) return
 
-      // Only handle specific events that need action
+      // Handle events
       if (event === 'SIGNED_IN') {
         if (session?.user) {
+          console.log('✅ User signed in:', session.user.email)
           setUser(session.user)
+          lastFetchedUserId.current = null // Reset to force fetch
           await fetchProfile(session.user.id)
         }
         setLoading(false)
       } else if (event === 'SIGNED_OUT') {
+        console.log('👋 User signed out')
         setUser(null)
         setProfile(null)
         lastFetchedUserId.current = null
         setLoading(false)
       } else if (event === 'TOKEN_REFRESHED') {
-        // Just update the user, don't refetch profile
+        console.log('🔄 Token refreshed')
         if (session?.user) {
           setUser(session.user)
         }
+      } else if (event === 'INITIAL_SESSION') {
+        // Only handle if initialization hasn't completed yet
+        if (!initializationComplete.current) {
+          console.log('📋 Initial session event')
+          if (session?.user) {
+            setUser(session.user)
+            await fetchProfile(session.user.id)
+          }
+          setLoading(false)
+          initializationComplete.current = true
+        }
       }
-      // Ignore INITIAL_SESSION as we handle it in initializeAuth
     })
 
     return () => {
       mounted = false
+      clearTimeout(timeout)
       subscription.unsubscribe()
     }
-  }, [])
+  }, [supabase])
 
   const signOut = async () => {
     try {
