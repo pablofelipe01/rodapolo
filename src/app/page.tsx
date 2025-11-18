@@ -24,10 +24,11 @@ import {
 } from 'lucide-react'
 
 export default function HomePage() {
-  const { user, profile, loading } = useAuth()
+  const { user, profile, loading, refreshProfile } = useAuth()
   const router = useRouter()
   const [_isVisible, setIsVisible] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     console.log('🏠 HomePage effect:', {
@@ -35,6 +36,7 @@ export default function HomePage() {
       hasUser: !!user,
       hasProfile: !!profile,
       role: profile?.role,
+      retryCount,
     })
 
     if (!loading && user && profile && !isRedirecting) {
@@ -43,8 +45,26 @@ export default function HomePage() {
       setIsRedirecting(true)
       router.push(redirectPath)
     }
+
+    // If user exists but no profile, try to refresh it
+    if (!loading && user && !profile && retryCount < 3) {
+      console.log('⚠️ User exists but no profile, retrying...', retryCount + 1)
+      setTimeout(() => {
+        refreshProfile()
+        setRetryCount(prev => prev + 1)
+      }, 1000)
+    }
+
     setIsVisible(true)
-  }, [user, profile, loading, router, isRedirecting])
+  }, [
+    user,
+    profile,
+    loading,
+    router,
+    isRedirecting,
+    retryCount,
+    refreshProfile,
+  ])
 
   if (loading || isRedirecting) {
     return (
@@ -55,6 +75,30 @@ export default function HomePage() {
             <p className='text-cyan-100 font-light'>
               {isRedirecting ? 'Redirigiendo...' : 'Cargando experiencia...'}
             </p>
+          </div>
+        </div>
+      </MainLayout>
+    )
+  }
+
+  // Show error if user is logged in but profile failed to load
+  if (user && !profile && retryCount >= 3) {
+    return (
+      <MainLayout showNavigation={false}>
+        <div className='flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900'>
+          <div className='text-center'>
+            <p className='text-red-400 font-light mb-4'>
+              Error: No se pudo cargar tu perfil
+            </p>
+            <Button
+              onClick={() => {
+                setRetryCount(0)
+                refreshProfile()
+              }}
+              className='bg-cyan-500 hover:bg-cyan-600'
+            >
+              Reintentar
+            </Button>
           </div>
         </div>
       </MainLayout>
